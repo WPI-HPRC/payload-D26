@@ -1,34 +1,56 @@
 #include <Arduino.h>
-
+//tuple ?
 enum SensorDataType : uint8_t {
   DATA_TYPE_IMU_1 = 0,
   DATA_TYPE_IMU_2 = 1,
 };
 
+template <typename T>
 struct SensorDataDescriptor {
   SensorDataType type;
   size_t size;
   unsigned long time_stamp;
+  T* data;
 };
+
+struct SensorInfo {
+  SensorDataType type;
+  const char* name;
+  uint8_t poll_rate_hz;
+}
 
 // base for sensors
 template <class Derived>
 class SensorBase {
 public:
-  // some way to get size
-  // init
-  // poll_rate
+  SensorBase(
+      const SensorDataType& dataType
+      const SensorInfo& info
+  ) : 
+    m_dataType(dataType) 
+    m_info(info)
+  {}
+
   inline void init() {
-    return static_cast<Derived*>(this)->init_impl();
+    static_cast<Derived*>(this)->init_impl();
   }
 
   inline long poll_rate() const {
-    return static_cast<Derived*>(this)->poll_rate_impl();
+    static_cast<Derived*>(this)->poll_rate_impl();
+  }
+  
+  inline uint8_t poll_rate_hz() const {
+    return m_info.poll_rate_hz;
   }
 
-  // something for data size
-  // something for data type
-  
+  inline size_t data_size() const {
+    return m_dataDescriptor == NULL ? -1 : m_dataDescriptor.size; 
+  }
+
+private:
+  SensorDataType m_dataType;
+  SensorInfo m_info;
+  SensorDataDescriptor<typename Derived::DataType> m_dataDescriptor = NULL;
 };
 
 // might want helpers for allocating and stuff?

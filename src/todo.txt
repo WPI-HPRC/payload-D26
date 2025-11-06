@@ -1,2 +1,3 @@
 https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 https://www.geeksforgeeks.org/system-design/curiously-recurring-template-pattern-crtp-2/
+tuple?
