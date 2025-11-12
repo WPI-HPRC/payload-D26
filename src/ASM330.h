@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Arduino.h>
-#include < Wire.h>
 #include "ASM330LHHSensor.h"
 #include "SensorManager.h"
+#include < Wire.h>
+#include <Arduino.h>
 
 struct ASM330Data {
   float accelX, accelY, accelZ, gyrX, gyrY, gyrZ;
@@ -71,4 +71,3 @@ private:
   unsigned long last_update_ms_;
   unsigned long poll_interval_ms_;
 };
-}
