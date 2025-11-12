@@ -56,23 +56,3 @@ private:
 // might want helpers for allocating and stuff?
 // want some way to find what the larges allocation will be
 
-template <class... Sensors>
-// can have more than one senor as the template
-class SensorManager {
-  public:
-    static size_t NUM = sizeof...(Sensors);
-    // largest data packet?
-    // list of sensors we have
-  
-    SensorManager(Sensors*... sensors) : sensors_(sensors...) {
-      for(size_t i = 0; i < NUM; i++) {
-        // some form of setup
-      }    
-    }
-
-    void sensors_init() {
-      for(size_t i = 0; i < NUM; i++) {
-        
-      }
-    }
-};
