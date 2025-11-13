@@ -24,11 +24,12 @@ struct SensorInfo {
   uint8_t poll_rate_hz;
 };
 
-template <class Derived> class SensorBase {
+template <class Derived, class Data>
+class SensorBase {
 public:
   // force dervied to define a class
-  using DataType = typename Derived::DataType;
-
+  using DataType Data;
+  
   // data at construction
   constexpr SensorBase(const SensorInfo &info) : info_(info) {
     descriptor_.type = info.type;

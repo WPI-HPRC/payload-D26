@@ -9,14 +9,14 @@ struct ASM330Data {
   float accelX, accelY, accelZ, gyrX, gyrY, gyrZ;
 };
 
-class ASM330 : public SensorBase<ASM330> {
+class ASM330 : public SensorBase<ASM330, ASM330Data> {
 public:
   using DataType = ASM330Data;
   static constexpr SensorDataType TYPE = SensorDataType::ACCEL;
 
   // construct
   ASM330()
-      : SensorBase<ASM330>({TYPE, "ASM330", 26}),
+      : SensorBase<ASM330, ASM330Data>({TYPE, "ASM330", 26}),
         AccGyr(&Wire, ASM330LHH_I2C_ADD_H), last_update_ms_(0),
         poll_interval_ms_(1000 / info_.poll_rate_hz) {}
 
