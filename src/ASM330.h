@@ -2,6 +2,7 @@
 
 #include "ASM330LHHSensor.h"
 #include "SensorManager.h"
+#include "WSerial.h"
 #include <Wire.h>
 #include <Arduino.h>
 
@@ -39,33 +40,39 @@ public:
     Serial.println("ASM330 initialized OK");
   }
 
-  void update_impl(SensorDataDescriptor<DataType> &desc) {
-    unsigned long now = millis();
-    if (now - last_update_ms_ < poll_interval_ms_) {
-      return; // skip if not time yet
-    }
-    last_update_ms_ = now;
+void update_impl(SensorDataDescriptor<DataType> &desc) {
+  Serial.println("polling");
+  unsigned long now = millis();
+  if (now - last_update_ms_ < poll_interval_ms_) {
+    Serial.println("ASM330 skip read due to interval");
+    return;
+  }
+  last_update_ms_ = now;
 
-    int32_t accel[3] = {0}, gyro[3] = {0};
-    AccGyr.Get_X_Axes(accel);
-    AccGyr.Get_G_Axes(gyro);
-
-    // Rotation fix: remap axes to match ICM orientation
-    desc.data.accelX = -(float)accel[1] / 1000.0f;
-    desc.data.accelY = (float)accel[0] / 1000.0f;
-    desc.data.accelZ = (float)accel[2] / 1000.0f;
-
-    desc.data.gyrX = -(float)gyro[1] / 1000.0f;
-    desc.data.gyrY = (float)gyro[0] / 1000.0f;
-    desc.data.gyrZ = (float)gyro[2] / 1000.0f;
-
-    desc.timestamp = now; // record update time
-
-    // Serial.printf("ASM330: %.2f %.2f %.2f | %.2f %.2f %.2f\n",
-    //   desc.data.accelX, desc.data.accelY, desc.data.accelZ,
-    //   desc.data.gyrX, desc.data.gyrY, desc.data.gyrZ);
+  int32_t accel[3], gyro[3];
+  if (AccGyr.Get_X_Axes(accel) != 0 || AccGyr.Get_G_Axes(gyro) != 0) {
+      Serial.println("ASM330 read error");
+      return;
   }
 
+  desc.data.accelX = -accel[1] / 1000.0f;
+  desc.data.accelY =  accel[0] / 1000.0f;
+  desc.data.accelZ =  accel[2] / 1000.0f;
+  desc.data.gyrX   = -gyro[1] / 1000.0f;
+  desc.data.gyrY   =  gyro[0] / 1000.0f;
+  desc.data.gyrZ   =  gyro[2] / 1000.0f;
+  desc.timestamp   = now;
+
+  Serial.println(desc.timestamp);
+  Serial.println(desc.data.accelX);
+  Serial.println(desc.data.accelY);
+  Serial.println(desc.data.accelZ);
+  Serial.println(desc.data.gyrX);
+  Serial.println(desc.data.gyrY);
+  Serial.println(desc.data.gyrZ);
+  Serial.println("should have had data ^");
+}
+  
 private:
   ASM330LHHSensor AccGyr;
   unsigned long last_update_ms_;

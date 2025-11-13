@@ -9,16 +9,19 @@ void setup() {
   Wire.begin();
 
   manager.init_all();
+  Serial.println("setup done");
 }
 
 void loop() {
+  Serial.println("hi");
   manager.update_all();
 
-  const auto &desc = manager.template get_descriptor<SensorDataType::ACCEL>();
+  const auto &desc = manager.get_descriptor<SensorDataType::ACCEL>();
   const auto &data = desc.data;
 
-  Serial.printf("Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f\n", data.accelX,
-                data.accelY, data.accelZ, data.gyrX, data.gyrY, data.gyrZ);
+  Serial.printf("Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f\n", 
+                data.accelX, data.accelY, data.accelZ, 
+                data.gyrX, data.gyrY, data.gyrZ);
 
   delay(20);
 }
