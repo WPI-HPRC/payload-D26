@@ -1,17 +1,19 @@
 #pragma once
 
 #include <Arduino.h>
-#include <tuple>
-#include <type_traits>
-#include <utility> 
 
-// sensor types
+// Sensor types
 enum class SensorDataType : uint8_t {
   ACCEL = 0,
   BARO = 1,
+  GPS = 2,
 };
 
-// sensor type, timestamp, data
+// Forward declarations
+class ASM330;
+class LPS22;
+
+// Sensor data descriptor
 template <typename T> 
 struct SensorDataDescriptor {
   SensorDataType type;
@@ -19,91 +21,113 @@ struct SensorDataDescriptor {
   T data;
 };
 
+// Sensor info
 struct SensorInfo {
   SensorDataType type;
   const char *name;
   uint8_t poll_rate_hz;
 };
 
+// Sensor base class
 template <class Derived, class Data>
 class SensorBase {
 public:
   using DataType = Data;
   
-  constexpr SensorBase(const SensorInfo &info) : info_(info) {
+  SensorBase(const SensorInfo &info) : info_(info) {
     descriptor_.type = info.type;
     descriptor_.timestamp = 0;
   }
 
-  inline void init() {
+  void init() {
     static_cast<Derived *>(this)->init_impl();
   }
 
-  inline void update() {
+  void update() {
     static_cast<Derived *>(this)->update_impl(descriptor_);
   }
 
-  inline const SensorDataDescriptor<DataType> &descriptor() const {
+  const SensorDataDescriptor<DataType> &descriptor() const {
     return descriptor_;
   }
 
-  inline SensorDataType type() const { return info_.type; }
-
-  inline uint8_t poll_rate_hz() const { return info_.poll_rate_hz; }
+  SensorDataType type() const { return info_.type; }
+  const char* name() const { return info_.name; }
+  uint8_t poll_rate_hz() const { return info_.poll_rate_hz; }
 
 protected:
   SensorInfo info_;
   SensorDataDescriptor<DataType> descriptor_;
 };
 
-template <class... Sensors> 
+// Simple non-template sensor interface
+class ISensor {
+public:
+  virtual ~ISensor() = default;
+  virtual void init() = 0;
+  virtual void update() = 0;
+  virtual SensorDataType type() const = 0;
+  virtual const char* name() const = 0;
+};
+
+// Simple SensorManager that can handle multiple sensors
 class SensorManager {
 public:
-  explicit SensorManager(Sensors *...sensors) : sensors_(sensors...) {}
+  SensorManager() = default;
 
-  void init_all() { 
-    std::apply([](auto*... s) { (s->init(), ...); }, sensors_);
+  // Add a sensor to the manager
+  template <typename Sensor>
+  void add_sensor(Sensor* sensor) {
+    if (sensor_count_ < MAX_SENSORS) {
+      sensors_[sensor_count_++] = sensor;
+    }
   }
 
-  void update_all() { 
-    std::apply([](auto*... s) { (s->update(), ...); }, sensors_);
+  // Initialize all sensors
+  void init_all() {
+    for (int i = 0; i < sensor_count_; i++) {
+      sensors_[i]->init();
+    }
   }
 
-  // Get descriptor by sensor type - compile-time checked
-  template <SensorDataType Target>
-  const auto& get_descriptor() const {
-    return get_descriptor_impl<Target>(std::make_index_sequence<sizeof...(Sensors)>{});
+  // Update all sensors
+  void update_all() {
+    for (int i = 0; i < sensor_count_; i++) {
+      sensors_[i]->update();
+    }
   }
+
+  // Get descriptor by type - you need to specify the sensor type
+  template <typename Sensor>
+  const auto& get_descriptor() {
+    for (int i = 0; i < sensor_count_; i++) {
+      if (sensors_[i]->type() == Sensor::TYPE) {
+        return static_cast<Sensor*>(sensors_[i])->descriptor();
+      }
+    }
+    
+    // Fallback
+    static typename Sensor::DataType dummy{};
+    static SensorDataDescriptor<typename Sensor::DataType> dummy_desc{Sensor::TYPE, 0, dummy};
+    return dummy_desc;
+  }
+
+  // Check if sensor type exists
+  template <typename Sensor>
+  bool has_sensor() const {
+    for (int i = 0; i < sensor_count_; i++) {
+      if (sensors_[i]->type() == Sensor::TYPE) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Get number of sensors
+  int count() const { return sensor_count_; }
 
 private:
-  std::tuple<Sensors *...> sensors_;
-
-  // Helper to find and return the right descriptor
-  template <SensorDataType Target, size_t... Is>
-  const auto& get_descriptor_impl(std::index_sequence<Is...>) const {
-    const auto* sensor = find_sensor<Target>(std::get<Is>(sensors_)...);
-    
-    if (!sensor) {
-      // This should never happen if static checks pass, but provide a fallback
-      static typename std::tuple_element_t<0, std::tuple<Sensors...>>::DataType dummy{};
-      static SensorDataDescriptor<decltype(dummy)> dummy_desc{Target, 0, dummy};
-      return dummy_desc;
-    }
-    
-    return sensor->descriptor();
-  }
-
-  // Recursive function to find sensor by type
-  template <SensorDataType Target, class First, class... Rest>
-  static const First* find_sensor(const First* first, const Rest*... rest) {
-    if (first->type() == Target) {
-      return first;
-    }
-    
-    if constexpr (sizeof...(Rest) > 0) {
-      return find_sensor<Target>(rest...);
-    } else {
-      return nullptr;
-    }
-  }
+  static constexpr int MAX_SENSORS = 8;
+  ISensor* sensors_[MAX_SENSORS] = {nullptr};
+  int sensor_count_ = 0;
 };
