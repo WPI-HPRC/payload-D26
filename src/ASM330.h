@@ -2,7 +2,7 @@
 
 #include "ASM330LHHSensor.h"
 #include "SensorManager.h"
-#include < Wire.h>
+#include <Wire.h>
 #include <Arduino.h>
 
 struct ASM330Data {

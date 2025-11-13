@@ -28,7 +28,7 @@ template <class Derived, class Data>
 class SensorBase {
 public:
   // force dervied to define a class
-  using DataType Data;
+  using DataType = Data;
   
   // data at construction
   constexpr SensorBase(const SensorInfo &info) : info_(info) {
@@ -59,27 +59,30 @@ protected:
   SensorDataDescriptor<DataType> descriptor_;
 };
 
-// find by type at compile time?
+// find by type at compile time
 template <SensorDataType Target, class... Sensors>
 struct find_sensor_by_type_impl;
 
-// base: no more to look at - throw compile time error i think?
-template <SensorDataType Target> struct find_sensor_by_type_impl<Target> {
-  static_assert(Target != Target, "Requested SensorDataType is not present :<");
+// base: no more to look at
+template <SensorDataType Target> 
+struct find_sensor_by_type_impl<Target> {
+  // This will cause substitution failure but won't trigger static_assert immediately
+  // The error will occur when someone tries to use ::type
 };
 
 // recur: check if first sensor match
 template <SensorDataType Target, class First, class... Rest>
 struct find_sensor_by_type_impl<Target, First, Rest...> {
-  using type = std::conditional<
-      (First::TYPE == Target), First,
-      typename find_sensor_by_type_impl<Target, Rest...>::type>;
+  using type = typename std::conditional<
+      (First::TYPE == Target), 
+      First,
+      typename find_sensor_by_type_impl<Target, Rest...>::type
+  >::type;
 };
 
 // alias
 template <SensorDataType Target, class... Sensors>
-using find_sensor_by_type =
-    typename find_sensor_by_type_impl<Target, Sensors...>::type;
+using find_sensor_by_type = typename find_sensor_by_type_impl<Target, Sensors...>::type;
 
 template <class... Sensors> class SensorManager {
 public:
