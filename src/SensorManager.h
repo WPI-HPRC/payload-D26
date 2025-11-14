@@ -68,9 +68,9 @@ public:
   virtual void update() = 0;
   virtual SensorDataType type() const = 0;
   virtual const char* name() const = 0;
+  virtual const void* get_descriptor_ptr() const = 0;
 };
 
-// Simple SensorManager that can handle multiple sensors
 class SensorManager {
 public:
   SensorManager() = default;
@@ -97,18 +97,18 @@ public:
     }
   }
 
-  // Get descriptor by type - you need to specify the sensor type
   template <typename Sensor>
   const auto& get_descriptor() {
     for (int i = 0; i < sensor_count_; i++) {
       if (sensors_[i]->type() == Sensor::TYPE) {
-        return static_cast<Sensor*>(sensors_[i])->descriptor();
+        auto* sensor = static_cast<Sensor*>(sensors_[i]);
+        return sensor->descriptor();
       }
     }
     
-    // Fallback
-    static typename Sensor::DataType dummy{};
-    static SensorDataDescriptor<typename Sensor::DataType> dummy_desc{Sensor::TYPE, 0, dummy};
+    // Fallback - create proper dummy
+    static typename Sensor::DataType dummy_data{};
+    static SensorDataDescriptor<typename Sensor::DataType> dummy_desc{Sensor::TYPE, 0, dummy_data};
     return dummy_desc;
   }
 

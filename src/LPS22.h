@@ -50,15 +50,6 @@ public:
       desc.data.pressure = pressure.pressure;
       desc.data.temperature = temperature.temperature;
       desc.timestamp = now;
-
-      // Debug output
-      Serial.print("LPS22 UPDATE - Pressure: ");
-      Serial.print(desc.data.pressure, 4);
-      Serial.print(" hPa, Temp: ");
-      Serial.print(desc.data.temperature, 4);
-      Serial.print(" C, Alt: ");
-    } else {
-      Serial.println("LPS22 UPDATE - Failed to read sensor");
     }
   }
 
@@ -67,6 +58,7 @@ public:
   void update() override { update_impl(descriptor_); }
   SensorDataType type() const override { return TYPE; }
   const char *name() const override { return info_.name; }
+  const void* get_descriptor_ptr() const override { return &descriptor_; }
 
 private:
   Adafruit_LPS22 lps;

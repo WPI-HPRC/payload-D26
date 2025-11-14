@@ -65,21 +65,6 @@ public:
     desc.data.gyrY = (float)gyro[0] / 1000.0f;
     desc.data.gyrZ = (float)gyro[2] / 1000.0f;
     desc.timestamp = now;
-
-    // Debug output
-    Serial.print("ASM330 UPDATE - Accel: ");
-    Serial.print(desc.data.accelX, 4);
-    Serial.print(", ");
-    Serial.print(desc.data.accelY, 4);
-    Serial.print(", ");
-    Serial.print(desc.data.accelZ, 4);
-    Serial.print(" | Gyro: ");
-    Serial.print(desc.data.gyrX, 4);
-    Serial.print(", ");
-    Serial.print(desc.data.gyrY, 4);
-    Serial.print(", ");
-    Serial.print(desc.data.gyrZ, 4);
-    Serial.println();
   }
 
   // ISensor interface implementation
@@ -87,6 +72,7 @@ public:
   void update() override { update_impl(descriptor_); }
   SensorDataType type() const override { return TYPE; }
   const char *name() const override { return info_.name; }
+  const void* get_descriptor_ptr() const override { return &descriptor_; }
 
 private:
   ASM330LHHSensor AccGyr;
