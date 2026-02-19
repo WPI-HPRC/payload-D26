@@ -95,10 +95,8 @@ void sensorLoop() {
         last_print = millis();
         loop_count++;
 
-        Serial.print("\n=== Loop ");
-        Serial.print(loop_count);
-        Serial.println(" ===");
 
+        
         // DIRECT ACCESS to sensor data - this is guaranteed to work
         const auto &accel_desc = ctx.accel.get_descriptor();
         const auto &baro_desc = ctx.baro.get_descriptor();
@@ -107,6 +105,10 @@ void sensorLoop() {
         const auto &curr_desc = ctx.curr.get_descriptor();
 
         bool has_data = false;
+#ifdef DEBUG
+        Serial.print("\n=== Loop ");
+        Serial.print(loop_count);
+        Serial.println(" ===");
         // Print ASM330 data
         if (accel_desc.getLastUpdated() > 0)
         {
@@ -202,6 +204,7 @@ void sensorLoop() {
 
         Serial.println("======================");
     }
+#endif
 }
 
 void setup() {
