@@ -258,4 +258,34 @@ void loop() {
 
     sensorLoop();
     loggingLoop(&ctx);
+
+    static unsigned long lastTelemetry = 0;
+    const unsigned long telemetryPeriod = 100;  // 100 ms = 10 Hz
+
+    if (millis() - lastTelemetry >= telemetryPeriod) {
+        lastTelemetry = millis();
+
+        std::vector<uint8_t> buffer;
+
+        switch(currentState) {
+
+            case PRELAUNCH:
+            case BOOST:
+            case COAST:
+            case DROGUE_DESCENT:
+            case MAIN_DESCENT:
+            case RECOVERY:
+            case ABORT:
+                // Example: use Rocket30K packet for standard rocket
+                buffer = buildRocket30KPacket();
+                break;
+
+            default:
+                buffer = buildRocket30KPacket();
+                break;
+        }
+
+        // Send over radio / UART
+        transmitPacket(buffer);
+    }
 }

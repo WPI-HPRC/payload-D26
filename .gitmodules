@@ -1,0 +1,6 @@
+[submodule "Ebyte-E22"]
+	path = Ebyte-E22
+	url = https://github.com/WPI-HPRC/Ebyte-E22.git
+[submodule "src/telemetry-2026"]
+	path = src/telemetry-2026
+	url = https://github.com/WPI-HPRC/telemetry-2026.git
