@@ -1,13 +1,13 @@
 #pragma once
 
 #include <SdFat.h>
-#include "Sensors/ASM330.h"
-#include "Sensors/ICM20948.h"
-#include "Sensors/INA219.h"
-#include "Sensors/LSP22.h"
-#include "Sensors/MAX10S.h"
-#include "Servo.h"
-#include "SensorManager/SensorBase.h"
+#include "boilerplate/Sensors/Impl/ASM330.h"
+#include "boilerplate/Sensors/Impl/ICM20948.h"
+#include "boilerplate/Sensors/Impl/INA219.h"
+#include "boilerplate/Sensors/Impl/LSP22.h"
+#include "boilerplate/Sensors/Impl/MAX10S.h"
+#include "boilerplate/Servo.h"
+#include "boilerplate/SensorBase.h"
 #include "qmekf-lib/qmekf.h"
 
 struct ASM330Data;
