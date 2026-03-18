@@ -1,26 +1,8 @@
 #include "../State.h"
 
-double solveAltitude(double pressure) {
-    // physical parameters for model
-    const double pb = 101325;   // [Pa] pressure at sea level
-    const double Tb = 288.15;   // [K] temperature at seal level
-    const double Lb = -0.0065;  // [K/m] standard temperature lapse rate
-    const double hb = 0;        // [m] height at bottom of atmospheric layer (sea level)
-    const double R = 8.31432;   // [N*m/mol*K] universal gas constant
-    const double g0 = 9.80665;  // [m/s^2] Earth standard gravity
-    const double M = 0.0289644; // [kg/mol] molar mass of Earth's air
-
-    double pressure_Pa = pressure * 100;
-
-    return hb +
-           (Tb / Lb) * (pow((pressure_Pa / pb), (-R * Lb / (g0 * M))) - 1);
-}
-void coastInit (StateData* data) { }
-
-StateID coastLoop (StateData* data, Context* ctx) {
+void IRECRocketCoastAction() {
     static bool airBrakesOut = false;
     static bool airBrakesDone = false;
-    static double prevAltitude = 0;
 
     /*
     - Poll acceleration data from ctx
@@ -38,6 +20,42 @@ StateID coastLoop (StateData* data, Context* ctx) {
         ctx->airBrakes.writeMicroseconds(SERVO_MIN);
         airBrakesDone = true;
     }
+}
+
+void TwoStageRocketCoastAction() {
+    //TODO
+}
+
+double solveAltitude(double pressure) {
+    // physical parameters for model
+    const double pb = 101325;   // [Pa] pressure at sea level
+    const double Tb = 288.15;   // [K] temperature at seal level
+    const double Lb = -0.0065;  // [K/m] standard temperature lapse rate
+    const double hb = 0;        // [m] height at bottom of atmospheric layer (sea level)
+    const double R = 8.31432;   // [N*m/mol*K] universal gas constant
+    const double g0 = 9.80665;  // [m/s^2] Earth standard gravity
+    const double M = 0.0289644; // [kg/mol] molar mass of Earth's air
+
+    double pressure_Pa = pressure * 100;
+
+    return hb +
+           (Tb / Lb) * (pow((pressure_Pa / pb), (-R * Lb / (g0 * M))) - 1);
+}
+
+void coastInit (StateData* data) { }
+
+// Rocket types:
+//  IREC_ROCKET
+//  TWO_STAGE_ROCKET
+StateID coastLoop (StateData* data, Context* ctx) {
+    static double prevAltitude = 0; // is this still needed?
+
+    #ifdef IREC_ROCKET
+    IRECRocketCoastAction();
+    #endif
+    #ifdef TWO_STAGE_ROCKET
+    TwoStageRocketCoastAction();
+    #endif
 
     //const auto &baro_desc = ctx->baro.get_descriptor();
     //if (baro_desc.getLastUpdated() != data->lastBaroReadingTime) {
