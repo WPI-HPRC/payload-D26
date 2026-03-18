@@ -2,11 +2,10 @@
 
 double solveAltitude(double pressure) {
     // physical parameters for model
-    const double pb = 101325;  // [Pa] pressure at sea level
-    const double Tb = 288.15;  // [K] temperature at seal level
-    const double Lb = -0.0065; // [K/m] standard temperature lapse rate
-    const double hb =
-        0;                      // [m] height at bottom of atmospheric layer (sea level)
+    const double pb = 101325;   // [Pa] pressure at sea level
+    const double Tb = 288.15;   // [K] temperature at seal level
+    const double Lb = -0.0065;  // [K/m] standard temperature lapse rate
+    const double hb = 0;        // [m] height at bottom of atmospheric layer (sea level)
     const double R = 8.31432;   // [N*m/mol*K] universal gas constant
     const double g0 = 9.80665;  // [m/s^2] Earth standard gravity
     const double M = 0.0289644; // [kg/mol] molar mass of Earth's air
