@@ -1,26 +1,17 @@
-#include <SdFat.h>
 #include <stdint.h>
 #include "logging.h"
-//#include "Sensors/ASM330.h"
-#include "config.h"
+#include "ff.h"
 
 size_t dataLengths[] = {
     sizeof(ASM330Data),
     sizeof(LPS22Data), // Length of s2 data in Bytes
-    sizeof(ICMData),
-    sizeof(MAX10SData),
-    sizeof(INA219Data),
     sizeof(ekfState),
 };
 
 bool initializeLogging(Context *ctx) {
     Serial.print("Initailizing SD... ");
-    SPI.setSCLK(SD_SCLK);
-    SPI.setMISO(SD_MISO);
-    SPI.setMOSI(SD_MOSI);
-    SPI.begin();
 
-    if (ctx->sd.begin(SD_CS, SD_SPI_SPEED)) { 
+    if (SD.begin()) { 
         // TODO: Define these values
         int fileIdx = 0;
         char filename[100];
@@ -33,11 +24,11 @@ bool initializeLogging(Context *ctx) {
             sprintf(fixedRateLogFilename, "fixedRateLog%d.csv", fileIdx);
 
             Serial.printf("Trying files `%s/%s`\n", filename, errorFilename);
-            if (!ctx->sd.exists(filename))
+            if (SD.exists(filename))
             {
-                ctx->logFile = ctx->sd.open(filename, O_RDWR | O_CREAT | O_TRUNC);
-                ctx->errorLogFile = ctx->sd.open(errorFilename, O_RDWR | O_CREAT | O_TRUNC);
-                ctx->fixedRateLogFile = ctx->sd.open(fixedRateLogFilename, O_RDWR | O_CREAT | O_TRUNC);
+                ctx->logFile = SD.open(filename, FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+                ctx->errorLogFile = SD.open(errorFilename, FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+                ctx->fixedRateLogFile = SD.open(fixedRateLogFilename, FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
                 break;
             }
         }
@@ -118,7 +109,7 @@ void loggingLoop(Context *ctx) {
         };
         writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, ekfPData, EKF_P_TAG);
 
-        const auto &accel_desc = ctx->accel.get_descriptor();
+        const auto &accel_desc = ctx->asm330.get_descriptor();
         LogSensorData accel = {
             .asm330 = accel_desc.data
         };
@@ -132,25 +123,19 @@ void loggingLoop(Context *ctx) {
         
         const auto &mag_desc = ctx->mag.get_descriptor();
         LogSensorData mag = {
-            .icm20948 = mag_desc.data
+            .lism2 = mag_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, mag, ICM20948_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, mag, LISM2_TAG);
 
         const auto &gps_desc = ctx->gps.get_descriptor();
         LogSensorData gps = {
-            .max10s = gps_desc.data
+            .liv3f = gps_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, gps, MAX10S_TAG);
-
-        const auto &curr_desc = ctx->curr.get_descriptor();
-        LogSensorData ina = {
-            .ina219 = curr_desc.data
-        };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, ina, INA219_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, gps, LIV3F_TAG);
     }
 
     static long lastAccelDataAt = 0;
-    const auto &accel_desc = ctx->accel.get_descriptor();
+    const auto &accel_desc = ctx->asm330.get_descriptor();
     if (accel_desc.getLastUpdated() > lastAccelDataAt) {
         lastAccelDataAt = accel_desc.getLastUpdated();
         LogSensorData d = {
@@ -174,9 +159,9 @@ void loggingLoop(Context *ctx) {
     if (mag_desc.getLastUpdated() > lastMagDataAt) {
         lastMagDataAt = mag_desc.getLastUpdated();
         LogSensorData d = {
-            .icm20948 = mag_desc.data
+            .lism2 = mag_desc.data
         };
-        writePacket(&ctx->logFile, lastMagDataAt, d, ICM20948_TAG);
+        writePacket(&ctx->logFile, lastMagDataAt, d, LISM2_TAG);
     }
 
     static long lastGpsDataAt = 0;
@@ -184,19 +169,9 @@ void loggingLoop(Context *ctx) {
     if (gps_desc.getLastUpdated() > lastGpsDataAt) {
         lastGpsDataAt = gps_desc.getLastUpdated();
         LogSensorData d = {
-            .max10s = gps_desc.data
+            .liv3f = gps_desc.data
         };
-        writePacket(&ctx->logFile, lastGpsDataAt, d, MAX10S_TAG);
-    }
-
-    static long lastCurrentDataAt = 0;
-    const auto &curr_desc = ctx->curr.get_descriptor();
-    if (curr_desc.getLastUpdated() > lastCurrentDataAt) {
-        lastCurrentDataAt = curr_desc.getLastUpdated();
-        LogSensorData d = {
-            .ina219 = curr_desc.data
-        };
-        writePacket(&ctx->logFile, lastCurrentDataAt, d, INA219_TAG);
+        writePacket(&ctx->logFile, lastGpsDataAt, d, LIV3F_TAG);
     }
 }
 
@@ -205,5 +180,5 @@ void writePacket(File *logFile, uint32_t timestamp, LogSensorData data, SensorTy
 
     size_t length = sizeof(uint8_t) + sizeof(uint32_t) + dataLengths[type];
 
-    logFile->write(&packetToWrite, length);
+    logFile->write((const uint8_t *)&packetToWrite, length);
 }

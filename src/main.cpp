@@ -3,22 +3,37 @@
 #include "State.h"
 #include "States.h"
 
+#include "boilerplate/Sensors/Impl/ASM330.h"
 #include "boilerplate/Sensors/SensorManager/SensorManager.h"
-#include "config.h"
 
 #include "logging.h"
 
-Context ctx;
+#include <Wire.h>
+#include <HardwareSerial.h>
+#include <SPI.h>
 
-uint32_t millisSource() { return millis(); }
+SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
+TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
+HardwareSerial GPS_SERIAL(GPS_SERIAL_RX, GPS_SERIAL_TX);
+TwoWire CONNECTOR_I2C(CONNECTOR_I2C_SDA, CONNECTOR_I2C_SCL);
+SPIClass CAMERA_SPI(CAMERA_MOSI, CAMERA_MISO, CAMERA_SCK);
+HardwareSerial RADIO_SERIAL(RADIO_SERIAL_RX, RADIO_SERIAL_TX);
+
+Context ctx {
+    .asm330 = ASM330(&SENSORS_SPI, SENSORS_ASM_CS),
+    .lsm = LSM6(&SENSORS_SPI, SENSORS_LSM_CS),
+    .baro = LPS22(&SENSORS_SPI, SENSORS_LPS_CS),
+    .mag = LISM2(&SENSORS_SPI, SENSORS_LIS_CS),
+};
+
 
 SensorManager mgr {
-    millisSource,
-    ctx.accel,
+    millis,
+    ctx.asm330,
+    ctx.lsm,
     ctx.baro,
     ctx.mag,
     ctx.gps,
-    ctx.curr,
 };
 
 
@@ -45,25 +60,10 @@ void updateStateData(StateData *data) {
 }
 
 void sensorsSetup() {
-    Serial.begin(115200);
-    while(!Serial) {
-        delay(10);
-    }
-
     Serial.println("Starting MARS board initialization...");
-
-    Wire.setSDA(SENSOR_SDA);
-    Wire.setSCL(SENSOR_SCL);
-    Wire.begin();
-
-    Serial.print("I2C initialized on SDA: ");
-    Serial.print(SENSOR_SDA);
-    Serial.print(", SCL: ");
-    Serial.println(SENSOR_SCL);
+    SENSORS_SPI.begin();
 
     mgr.sensorInit();
-
-    Wire.setClock(400000);
 
     Serial.println("\n=== Sensor Initialization Summary ===");
     Serial.print("Total sensors: ");
@@ -95,36 +95,37 @@ void sensorLoop() {
         Serial.println(" ===");
 
         // DIRECT ACCESS to sensor data - this is guaranteed to work
-        const auto &accel_desc = ctx.accel.get_descriptor();
+        const auto &asm330_desc = ctx.asm330.get_descriptor();
+        const auto &lsm6_desc = ctx.lsm.get_descriptor();
         const auto &baro_desc = ctx.baro.get_descriptor();
         const auto &mag_desc = ctx.mag.get_descriptor();
-        const auto &gps_desc = ctx.gps.get_descriptor();
-        const auto &curr_desc = ctx.curr.get_descriptor();
+        // const auto &gps_desc = ctx.gps.get_descriptor();
+        // const auto &curr_desc = ctx.curr.get_descriptor();
 
         bool has_data = false;
         // Print ASM330 data
-        /*
-        if (accel_desc.getLastUpdated() > 0)
+        if (lsm6_desc.getLastUpdated() > 0)
         {
-            Serial.print("ASM330 - Accel: ");
-            Serial.print(accel_desc.data.accel0, 4);
+            Serial.print("LSM6DSO - Accel: ");
+            Serial.print(lsm6_desc.data.accel0, 4);
             Serial.print(", ");
-            Serial.print(accel_desc.data.accel1, 4);
+            Serial.print(lsm6_desc.data.accel1, 4);
             Serial.print(", ");
-            Serial.print(accel_desc.data.accel2, 4);
+            Serial.print(lsm6_desc.data.accel2, 4);
             Serial.print(" | Gyro: ");
-            Serial.print(accel_desc.data.gyr0, 4);
+            Serial.print(lsm6_desc.data.gyr0, 4);
             Serial.print(", ");
-            Serial.print(accel_desc.data.gyr1, 4);
+            Serial.print(lsm6_desc.data.gyr1, 4);
             Serial.print(", ");
-            Serial.print(accel_desc.data.gyr2, 4);
+            Serial.print(lsm6_desc.data.gyr2, 4);
             Serial.println();
             has_data = true;
         }
         else
         {
-            Serial.println("ASM330: No data (timestamp = 0)");
+            Serial.println("LSM6DSO: No data (timestamp = 0)");
         }
+        /*
 
         // Print LPS22 data
         if (baro_desc.getLastUpdated() > 0)
@@ -227,27 +228,29 @@ void setup() {
     loopFuncs[RECOVERY] = &recoveryLoop;
     loopFuncs[ABORT] = &abortLoop;
 
-    pinMode(BLUE_LED_PIN, OUTPUT);
-    pinMode(GREEN_LED_PIN, OUTPUT);
-    pinMode(RED_LED_PIN, OUTPUT);
-    pinMode(RED_LED_PIN1, OUTPUT);
-    pinMode(RED_LED_PIN2, OUTPUT);
+    pinMode(LED_BLUE, OUTPUT);
+    pinMode(LED_GREEN, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
 
+    Serial.begin(115200);
+    while(!Serial) {
+        delay(10);
+    }
     
     // NOTE: Run initialization on the first state
     initStateData(&data);
     (*initFuncs[currentState])(&data);
-    sensorsSetup();
+    // sensorsSetup();
     ctx.ekfLooping = false;
     ctx.sdInitialized = initializeLogging(&ctx);
 
-    ctx.airBrakes.attach(SERVO_PIN);
-    ctx.airBrakes.writeMicroseconds(SERVO_MIN);
+    // ctx.airBrakes.attach(SERVO_PIN);
+    // ctx.airBrakes.writeMicroseconds(SERVO_MIN);
 
     ctx.estimator = StateEstimator();
     
     BLA::Matrix<3, 1> ecef = {0, 0, 0};
-    ctx.estimator.init(ecef, millis());
+    // ctx.estimator.init(ecef, millis());
 }
 
 void ekfLoop(Context *ctx) {
@@ -258,7 +261,7 @@ void ekfLoop(Context *ctx) {
 
     uint32_t now = millis();
 
-    const auto &accel_desc = ctx->accel.get_descriptor();
+    const auto &asm330_desc = ctx->asm330.get_descriptor();
     const auto &baro_desc = ctx->baro.get_descriptor();
     const auto &mag_desc = ctx->mag.get_descriptor();
     const auto &gps_desc = ctx->gps.get_descriptor();
@@ -269,11 +272,11 @@ void ekfLoop(Context *ctx) {
                  currentState == MAIN_DESCENT;
 
     // Accel and gyro becuase they are on the same sensor
-    if(accel_desc.getLastUpdated() > last_accel_time) {
-        BLA::Matrix<3, 1> gyro = {accel_desc.data.gyr0, accel_desc.data.gyr1, accel_desc.data.gyr2};
+    if(asm330_desc.getLastUpdated() > last_accel_time) {
+        BLA::Matrix<3, 1> gyro = {asm330_desc.data.gyr0, asm330_desc.data.gyr1, asm330_desc.data.gyr2};
         ctx->estimator.fastGyroProp(gyro, now);
 
-        BLA::Matrix<3, 1> accel = {accel_desc.data.accel0, accel_desc.data.accel1, accel_desc.data.accel2};
+        BLA::Matrix<3, 1> accel = {asm330_desc.data.accel0, asm330_desc.data.accel1, asm330_desc.data.accel2};
         ctx->estimator.fastAccelProp(accel, now);
     }
 
@@ -284,7 +287,7 @@ void ekfLoop(Context *ctx) {
             ctx->estimator.ekfPredict(now); 
         }
     } else {
-        if(accel_desc.getLastUpdated() > last_accel_time ||
+        if(asm330_desc.getLastUpdated() > last_accel_time ||
            baro_desc.getLastUpdated() > last_baro_time ||
            mag_desc.getLastUpdated() > last_mag_time ||
            gps_desc.getLastUpdated() > last_gps_time) {
@@ -292,9 +295,9 @@ void ekfLoop(Context *ctx) {
         }
     }
 
-    if(accel_desc.getLastUpdated() > last_accel_time) {
-        last_accel_time = accel_desc.getLastUpdated();
-        BLA::Matrix<3, 1> accel = {accel_desc.data.accel0, accel_desc.data.accel1, accel_desc.data.accel2};
+    if(asm330_desc.getLastUpdated() > last_accel_time) {
+        last_accel_time = asm330_desc.getLastUpdated();
+        BLA::Matrix<3, 1> accel = {asm330_desc.data.accel0, asm330_desc.data.accel1, asm330_desc.data.accel2};
         ctx->estimator.runAccelUpdate(accel, now);
     }
 
@@ -313,13 +316,13 @@ void ekfLoop(Context *ctx) {
         ctx->estimator.runMagUpdate(mag, now);
     }
 
-    if (gps_desc.getLastUpdated() > last_gps_time)
-    {
-        last_gps_time = gps_desc.getLastUpdated();
-        BLA::Matrix<3, 1> gpsPos = {gps_desc.data.ecefX, gps_desc.data.ecefY, gps_desc.data.ecefZ};
-        BLA::Matrix<3, 1> gpsVel = {gps_desc.data.velN, gps_desc.data.velE, gps_desc.data.velD};
-        ctx->estimator.runGPSUpdate(gpsPos, gpsVel, false, now);
-    }
+    // if (gps_desc.getLastUpdated() > last_gps_time)
+    // {
+    //     last_gps_time = gps_desc.getLastUpdated();
+    //     BLA::Matrix<3, 1> gpsPos = {gps_desc.data.ecefX, gps_desc.data.ecefY, gps_desc.data.ecefZ};
+    //     BLA::Matrix<3, 1> gpsVel = {gps_desc.data.velN, gps_desc.data.velE, gps_desc.data.velD};
+    //     ctx->estimator.runGPSUpdate(gpsPos, gpsVel, false, now);
+    // }
 }
 
 void loop() {

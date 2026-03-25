@@ -1,21 +1,16 @@
 #pragma once
 
 #include <stdint.h>
-//#include "Sensors/ASM330.h"
-//#include "Sensors/LSP22.h"
-//#include "Sensors/ICM20948.h"
-//#include "Sensors/MAX10S.h"
-//#include "Sensors/INA219.h"
 #include "Context.h"
+#include "boilerplate/Sensors/Impl/LIS2MDLTR.h"
 
 enum SensorType {
     ASM330_TAG = 0,
     LPS22_TAG = 1,
-    ICM20948_TAG = 2,
-    MAX10S_TAG = 3,
-    INA219_TAG = 4,
-    EKF_STATE_TAG = 5,
-    EKF_P_TAG = 6
+    LISM2_TAG = 2,
+    LIV3F_TAG = 3,
+    EKF_STATE_TAG = 4,
+    EKF_P_TAG = 5
 };
 
 struct ekfState {
@@ -65,9 +60,8 @@ struct ekfP {
 union LogSensorData {
     ASM330Data asm330;
     LPS22Data lps22;
-    ICMData icm20948;
-    MAX10SData max10s;
-    INA219Data ina219;
+    LIV3FData liv3f;
+    LISM2Data lism2;
     ekfState ekf_state;
     ekfP ekf_p;
 };

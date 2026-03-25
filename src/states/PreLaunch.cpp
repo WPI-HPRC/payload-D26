@@ -16,7 +16,7 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
 
   //static bool ComuteInitialOrientationThisLoop = false;
 
-  const auto &accel_desc = ctx->accel.get_descriptor();
+  const auto &accel_desc = ctx->asm330.get_descriptor();
   BLA::Matrix<3, 1> accel = {accel_desc.data.accel0, accel_desc.data.accel1,
                              accel_desc.data.accel2};
 
@@ -25,12 +25,12 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
                            mag_desc.data.mag2};
 
   const auto &gps_desc = ctx->gps.get_descriptor();
-  BLA::Matrix<3, 1> gps = {gps_desc.data.ecefX, gps_desc.data.ecefY,
-                           gps_desc.data.ecefZ};
+  // BLA::Matrix<3, 1> gps = {gps_desc.data.ecefX, gps_desc.data.ecefY,
+  //                          gps_desc.data.ecefZ};
 
   // Pad loop for 2 seconds after 5 second delay
   if (data->currentTime > 5000 && data->currentTime < 7000) {
-    ctx->estimator.padLoop(accel, mag, gps);
+    // ctx->estimator.padLoop(accel, mag, gps);
     //ComuteInitialOrientationThisLoop = true;
 
     ctx->estimator.computeInitialOrientation();
@@ -69,17 +69,17 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
     if ((millis() - lastBlueToggleTime) > 250) {
       lastBlueToggleTime = millis();
       BlueLedState = !BlueLedState;
-      digitalWrite(BLUE_LED_PIN, BlueLedState);
+      digitalWrite(LED_BLUE, BlueLedState);
     }
   }
 
-  if (gps_desc.data.gpsLockType == 3) {
+  // if (gps_desc.data.gpsLockType == 3) {
     if ((millis() - lastGreenToggleTime) > 250) {
       lastGreenToggleTime = millis();
       GreenLedState = !GreenLedState;
-      digitalWrite(GREEN_LED_PIN, GreenLedState);
+      digitalWrite(LED_GREEN, GreenLedState);
     }
-  }
+  // }
 
   return PRELAUNCH;
 }

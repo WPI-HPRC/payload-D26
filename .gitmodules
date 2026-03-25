@@ -1,3 +1,6 @@
 [submodule "src/boilerplate"]
 	path = src/boilerplate
 	url = https://github.com/WPI-HPRC/boilerplate.git
+[submodule "mars-board-definitions"]
+	path = mars-board-definitions
+	url = https://github.com/wpi-hprc/mars-board-definitions.git
