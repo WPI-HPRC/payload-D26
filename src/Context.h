@@ -3,6 +3,7 @@
 #include <STM32SD.h>
 #include <Servo.h>
 #include "boilerplate/Sensors/Impl/ASM330.h"
+#include "boilerplate/Sensors/Impl/INA219.h"
 #include "boilerplate/Sensors/Impl/LIS2MDLTR.h"
 #include "boilerplate/Sensors/Impl/LIV3F.h"
 #include "boilerplate/Sensors/Impl/LPS22.h"

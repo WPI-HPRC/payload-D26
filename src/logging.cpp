@@ -4,8 +4,13 @@
 
 size_t dataLengths[] = {
     sizeof(ASM330Data),
-    sizeof(LPS22Data), // Length of s2 data in Bytes
+    sizeof(INA219Data),
+    sizeof(LIS2MDLTRData),
+    sizeof(LIV3FData)
+    sizeof(LPS22Data),
+    sizeof(LMS6Data),
     sizeof(ekfState),
+    sizeof(ekfP),
 };
 
 bool initializeLogging(Context *ctx) {
@@ -20,8 +25,9 @@ bool initializeLogging(Context *ctx) {
         while (fileIdx < 100)
         {
             sprintf(filename, "flightData%d.csv", fileIdx);
-            sprintf(errorFilename, "errorLog%d.txt", fileIdx++);
+            sprintf(errorFilename, "errorLog%d.txt", fileIdx);
             sprintf(fixedRateLogFilename, "fixedRateLog%d.csv", fileIdx);
+            fileIdx++;
 
             Serial.printf("Trying files `%s/%s`\n", filename, errorFilename);
             if (SD.exists(filename))

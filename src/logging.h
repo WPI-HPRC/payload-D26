@@ -2,15 +2,16 @@
 
 #include <stdint.h>
 #include "Context.h"
-#include "boilerplate/Sensors/Impl/LIS2MDLTR.h"
 
 enum SensorType {
     ASM330_TAG = 0,
-    LPS22_TAG = 1,
-    LISM2_TAG = 2,
+    INA219_TAG = 1,
+    LIS2MDLTR_TAG = 2,
     LIV3F_TAG = 3,
-    EKF_STATE_TAG = 4,
-    EKF_P_TAG = 5
+    LPS22_TAG = 4,
+    LSM2_TAG = 5,
+    EKF_STATE_TAG = 6,
+    EKF_P_TAG = 7,
 };
 
 struct ekfState {
@@ -59,9 +60,11 @@ struct ekfP {
 
 union LogSensorData {
     ASM330Data asm330;
-    LPS22Data lps22;
+    INA219Data ina219;
+    LIS2MDLTRData lism2;
     LIV3FData liv3f;
-    LISM2Data lism2;
+    LPS22Data lps22;
+    LSM2Data lism2;
     ekfState ekf_state;
     ekfP ekf_p;
 };
