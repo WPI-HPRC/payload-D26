@@ -5,13 +5,12 @@
 
 enum SensorType {
     ASM330_TAG = 0,
-    INA219_TAG = 1,
-    LIS2MDLTR_TAG = 2,
-    LIV3F_TAG = 3,
-    LPS22_TAG = 4,
-    LSM2_TAG = 5,
-    EKF_STATE_TAG = 6,
-    EKF_P_TAG = 7,
+    LIS2MDLTR_TAG,
+    LIV3F_TAG,
+    LPS22_TAG,
+    LSM6_TAG,
+    EKF_STATE_TAG,
+    EKF_P_TAG,
 };
 
 struct ekfState {
@@ -60,11 +59,10 @@ struct ekfP {
 
 union LogSensorData {
     ASM330Data asm330;
-    INA219Data ina219;
-    LIS2MDLTRData lism2;
+    LIS2MDLData lis2m;
     LIV3FData liv3f;
     LPS22Data lps22;
-    LSM2Data lism2;
+    LSM6Data lsm6;
     ekfState ekf_state;
     ekfP ekf_p;
 };

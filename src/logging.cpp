@@ -4,11 +4,10 @@
 
 size_t dataLengths[] = {
     sizeof(ASM330Data),
-    sizeof(INA219Data),
-    sizeof(LIS2MDLTRData),
-    sizeof(LIV3FData)
+    sizeof(LIS2MDLData),
+    sizeof(LIV3FData),
     sizeof(LPS22Data),
-    sizeof(LMS6Data),
+    sizeof(LSM6Data),
     sizeof(ekfState),
     sizeof(ekfP),
 };
@@ -129,9 +128,9 @@ void loggingLoop(Context *ctx) {
         
         const auto &mag_desc = ctx->mag.get_descriptor();
         LogSensorData mag = {
-            .lism2 = mag_desc.data
+            .lis2m = mag_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, mag, LISM2_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, mag, LIS2MDLTR_TAG);
 
         const auto &gps_desc = ctx->gps.get_descriptor();
         LogSensorData gps = {
@@ -165,9 +164,9 @@ void loggingLoop(Context *ctx) {
     if (mag_desc.getLastUpdated() > lastMagDataAt) {
         lastMagDataAt = mag_desc.getLastUpdated();
         LogSensorData d = {
-            .lism2 = mag_desc.data
+            .lis2m = mag_desc.data
         };
-        writePacket(&ctx->logFile, lastMagDataAt, d, LISM2_TAG);
+        writePacket(&ctx->logFile, lastMagDataAt, d, LIS2MDLTR_TAG);
     }
 
     static long lastGpsDataAt = 0;
