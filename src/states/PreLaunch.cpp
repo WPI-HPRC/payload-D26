@@ -13,9 +13,9 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
   static bool GreenLedState = false;
   static uint32_t lastBlueToggleTime = 0;
   static uint32_t lastGreenToggleTime = 0;
+  //static bool ComputeInitialOrientationThisLoop = false;
 
-  //static bool ComuteInitialOrientationThisLoop = false;
-
+  // get acceleration, magnetometer, and gps data 
   const auto &accel_desc = ctx->asm330.get_descriptor();
   BLA::Matrix<3, 1> accel = {accel_desc.data.accel0, accel_desc.data.accel1,
                              accel_desc.data.accel2};
@@ -28,21 +28,15 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
   // BLA::Matrix<3, 1> gps = {gps_desc.data.ecefX, gps_desc.data.ecefY,
   //                          gps_desc.data.ecefZ};
 
-  // Pad loop for 2 seconds after 5 second delay
+  // Compute initial sensor data and orientation for 2 seconds after 5 second delay
   if (data->currentTime > 5000 && data->currentTime < 7000) {
     // ctx->estimator.padLoop(accel, mag, gps);
-    //ComuteInitialOrientationThisLoop = true;
+    // ComputeInitialOrientationThisLoop = true;
 
     ctx->estimator.computeInitialOrientation();
-    //ComuteInitialOrientationThisLoop = false;
+    //ComputeInitialOrientationThisLoop = false;
     ctx->ekfLooping = true;
   }
-
-  //if (ComuteInitialOrientationThisLoop == true) {
-  //  ctx->estimator.computeInitialOrientation();
-  //  ComuteInitialOrientationThisLoop = false;
-  //  ctx->ekfLooping = true;
-  //}
 
   /*
   - Poll acceleration data from ctx
@@ -50,22 +44,17 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
   - Check if need to abort
   - Update sensor data and ctx for next iteration?
   */
-  //    if (accel_desc.getLastUpdated() != data->lastAccelReadingTime) {
-  //        data->lastAccelReadingTime = accel_desc.getLastUpdated();
-  //        if(data->accelDebouncer.update(accel_desc.data.accel0 >
-  //        LAUNCH_TRHESHOLD, millis())) {
-  //            return BOOST;
-  //        }
-  //    }
 
+  // get accel data
   const auto acc_vec = ctx->estimator.get_accel_prev();
-  // check acceleration in vertical direction is greater than threshold
+
+  // check acceleration in vertical direction is greater than threshold (5) with debouncer
   if (data->accelDebouncer.update(abs(acc_vec(0, 0)) > LAUNCH_TRHESHOLD, millis())) {
     return BOOST;
   }
 
   if (ctx->sdInitialized && ctx->logFile != NULL) {
-    // blink
+    // blink blue led every 250ms
     if ((millis() - lastBlueToggleTime) > 250) {
       lastBlueToggleTime = millis();
       BlueLedState = !BlueLedState;
@@ -74,6 +63,7 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
   }
 
   // if (gps_desc.data.gpsLockType == 3) {
+    // blink green led every 250ms
     if ((millis() - lastGreenToggleTime) > 250) {
       lastGreenToggleTime = millis();
       GreenLedState = !GreenLedState;
