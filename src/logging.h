@@ -79,4 +79,4 @@ bool initializeLogging(Context *ctx);
 
 void loggingLoop(Context *ctx);
 
-void writePacket(File *logFile, uint32_t timestamp, LogSensorData data, SensorType type);
+void writePacket(File *logFile, uint32_t timestamp, LogSensorData *data, SensorType type);

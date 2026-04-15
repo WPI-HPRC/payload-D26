@@ -87,7 +87,7 @@ void loggingLoop(Context *ctx) {
                 .baroB = ekfState(19, 0),
             }
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, ekfStateData, EKF_STATE_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &ekfStateData, EKF_STATE_TAG);
 
         BLA::Matrix<19, 1> ekfP = ctx->estimator.getPDiag();
         LogSensorData ekfPData = {
@@ -112,31 +112,31 @@ void loggingLoop(Context *ctx) {
                 .P18 = ekfP(17, 0),
             }
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, ekfPData, EKF_P_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &ekfPData, EKF_P_TAG);
 
         const auto &accel_desc = ctx->asm330.get_descriptor();
         LogSensorData accel = {
             .asm330 = accel_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, accel, ASM330_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &accel, ASM330_TAG);
 
         const auto &baro_desc = ctx->baro.get_descriptor();
         LogSensorData baro = {
             .lps22 = baro_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, baro, LPS22_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &baro, LPS22_TAG);
         
         const auto &mag_desc = ctx->mag.get_descriptor();
         LogSensorData mag = {
             .lis2m = mag_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, mag, LIS2MDLTR_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &mag, LIS2MDLTR_TAG);
 
         const auto &gps_desc = ctx->gps.get_descriptor();
         LogSensorData gps = {
             .liv3f = gps_desc.data
         };
-        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, gps, LIV3F_TAG);
+        writePacket(&ctx->fixedRateLogFile, lastTimeLoggedFixedRate, &gps, LIV3F_TAG);
     }
 
     static long lastAccelDataAt = 0;
@@ -146,7 +146,7 @@ void loggingLoop(Context *ctx) {
         LogSensorData d = {
             .asm330 = accel_desc.data
         };
-        writePacket(&ctx->logFile, lastAccelDataAt, d, ASM330_TAG);
+        writePacket(&ctx->logFile, lastAccelDataAt, &d, ASM330_TAG);
     }
 
     static long lastBaroDataAt = 0;
@@ -156,7 +156,7 @@ void loggingLoop(Context *ctx) {
         LogSensorData d = {
             .lps22 = baro_desc.data
         };
-        writePacket(&ctx->logFile, lastBaroDataAt, d, LPS22_TAG);
+        writePacket(&ctx->logFile, lastBaroDataAt, &d, LPS22_TAG);
     }
 
     static long lastMagDataAt = 0;
@@ -166,7 +166,7 @@ void loggingLoop(Context *ctx) {
         LogSensorData d = {
             .lis2m = mag_desc.data
         };
-        writePacket(&ctx->logFile, lastMagDataAt, d, LIS2MDLTR_TAG);
+        writePacket(&ctx->logFile, lastMagDataAt, &d, LIS2MDLTR_TAG);
     }
 
     static long lastGpsDataAt = 0;
@@ -176,12 +176,12 @@ void loggingLoop(Context *ctx) {
         LogSensorData d = {
             .liv3f = gps_desc.data
         };
-        writePacket(&ctx->logFile, lastGpsDataAt, d, LIV3F_TAG);
+        writePacket(&ctx->logFile, lastGpsDataAt, &d, LIV3F_TAG);
     }
 }
 
-void writePacket(File *logFile, uint32_t timestamp, LogSensorData data, SensorType type) {
-    Packet packetToWrite = { type, timestamp, data};
+void writePacket(File *logFile, uint32_t timestamp, LogSensorData *data, SensorType type) {
+    Packet packetToWrite = { type, timestamp, *data};
 
     size_t length = sizeof(uint8_t) + sizeof(uint32_t) + dataLengths[type];
 
