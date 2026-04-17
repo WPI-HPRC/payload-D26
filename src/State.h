@@ -29,6 +29,8 @@ struct StateData {
     Debouncer velDebouncer = Debouncer(20);
     Servo servo1;
     Servo servo2;
+    float linear_vel;
+    float angular_vel;
 };
 
 typedef void (*StateInitFunc)(StateData *data);
