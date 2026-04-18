@@ -14,6 +14,7 @@ struct LPS22Data;
 struct ICMData;
 struct MAX10SData;
 struct INA219Data;
+struct Servo;
 
 struct Context {
     File logFile;

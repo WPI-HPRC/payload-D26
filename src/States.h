@@ -18,6 +18,10 @@ StateID coastLoop (StateData* data, Context* ctx);
 void drogueDescentInit(StateData *data);
 StateID drogueDescentLoop (StateData* data, Context* ctx);
 
+// FORWARD
+void forwardInit(StateData *data);
+StateID drogueDescentLoop (StateData* data, Context* ctx);
+
 // MAIN_DESCENT
 void mainDescentInit(StateData *data);
 StateID mainDescentLoop (StateData* data, Context* ctx);

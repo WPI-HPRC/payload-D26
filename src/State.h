@@ -2,6 +2,7 @@
 
 #include "Context.h"
 #include "debouncer.h"
+#include <Servo.h>
 
 enum StateID {
     PRELAUNCH,
@@ -11,7 +12,8 @@ enum StateID {
     MAIN_DESCENT,
     RECOVERY,
     ABORT,
-    NUM_STATES
+    NUM_STATES,
+    FORWARD
 };
 
 struct StateData {
@@ -25,6 +27,8 @@ struct StateData {
     Debouncer baroDebouncer = Debouncer(20);
     Debouncer accelDebouncer = Debouncer(20);
     Debouncer velDebouncer = Debouncer(20);
+    Servo servo1;
+    Servo servo2;
 };
 
 typedef void (*StateInitFunc)(StateData *data);
