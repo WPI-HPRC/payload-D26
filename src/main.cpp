@@ -263,10 +263,12 @@ void ekfLoop(Context *ctx) {
     const auto &mag_desc = ctx->mag.get_descriptor();
     const auto &gps_desc = ctx->gps.get_descriptor();
 
-    bool inAir = currentState == BOOST ||
-                 currentState == COAST ||
-                 currentState == DROGUE_DESCENT ||
-                 currentState == MAIN_DESCENT;
+    bool inAir = false;
+
+    // bool inAir = currentState == BOOST ||
+    //              currentState == COAST ||
+    //              currentState == DROGUE_DESCENT ||
+    //              currentState == MAIN_DESCENT;
 
     // Accel and gyro becuase they are on the same sensor
     if(asm330_desc.getLastUpdated() > last_accel_time) {
