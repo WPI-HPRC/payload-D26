@@ -50,9 +50,6 @@ SensorManager mgr {
 StateID currentState;
 StateData data;
 
-StateInitFunc initFuncs[NUM_STATES] = {};
-StateLoopFunc loopFuncs[NUM_STATES] = {};
-
 void initStateData(StateData *data) {
     data->startTime = millis();
     data->currentTime = 0;
@@ -214,24 +211,10 @@ void sensorLoop() {
 }
 
 void setup() {
-    currentState = PRELAUNCH;
+    currentState = FORWARD;
     data = {};
 
-    initFuncs[PRELAUNCH] = &prelaunchInit;
-    initFuncs[BOOST] = &boostInit;
-    initFuncs[COAST] = &coastInit;
-    initFuncs[DROGUE_DESCENT] = &drogueDescentInit;
-    initFuncs[MAIN_DESCENT] = &mainDescentInit;
-    initFuncs[RECOVERY] = &recoveryInit;
-    initFuncs[ABORT] = &abortInit;
-
-    loopFuncs[PRELAUNCH] = &prelaunchLoop;
-    loopFuncs[BOOST] = &boostLoop;
-    loopFuncs[COAST] = &coastLoop;
-    loopFuncs[DROGUE_DESCENT] = &drogueDescentLoop;
-    loopFuncs[MAIN_DESCENT] = &mainDescentLoop;
-    loopFuncs[RECOVERY] = &recoveryLoop;
-    loopFuncs[ABORT] = &abortLoop;
+    initStateMap();
 
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_GREEN, OUTPUT);
@@ -256,7 +239,7 @@ void setup() {
     // ctx.airBrakes.attach(SERVO_PIN);
     // ctx.airBrakes.writeMicroseconds(SERVO_MIN);
 
-    ctx.estimator = StateEstimator();
+    ctx.estimator = SplitStateEstimator();
     
     BLA::Matrix<3, 1> ecef = {0, 0, 0};
     // ctx.estimator.init(ecef, millis());
@@ -295,14 +278,14 @@ void ekfLoop(Context *ctx) {
         if(baro_desc.getLastUpdated() > last_baro_time ||
            mag_desc.getLastUpdated() > last_mag_time ||
            gps_desc.getLastUpdated() > last_gps_time) {
-            ctx->estimator.ekfPredict(now); 
+            ctx->estimator.PVekfPredict(now); 
         }
     } else {
         if(asm330_desc.getLastUpdated() > last_accel_time ||
            baro_desc.getLastUpdated() > last_baro_time ||
            mag_desc.getLastUpdated() > last_mag_time ||
            gps_desc.getLastUpdated() > last_gps_time) {
-            ctx->estimator.ekfPredict(now); 
+            ctx->estimator.PVekfPredict(now); 
         }
     }
 
@@ -317,7 +300,7 @@ void ekfLoop(Context *ctx) {
         last_baro_time = baro_desc.getLastUpdated();
         BLA::Matrix<1, 1> baro = {baro_desc.data.pressure};
         ctx->estimator.runBaroUpdate(baro, now);
-        ctx->estimator.setTemp(baro_desc.data.temp);
+        ctx->estimator.set_curr_temp(baro_desc.data.temp);
     }
 
     if (mag_desc.getLastUpdated() > last_mag_time)

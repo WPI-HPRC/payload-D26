@@ -33,9 +33,9 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
     // ctx->estimator.padLoop(accel, mag, gps);
     //ComuteInitialOrientationThisLoop = true;
 
-    ctx->estimator.computeInitialOrientation();
+    // ctx->estimator.computeInitialOrientation();
     //ComuteInitialOrientationThisLoop = false;
-    ctx->ekfLooping = true;
+    // ctx->ekfLooping = true;
   }
 
   //if (ComuteInitialOrientationThisLoop == true) {
