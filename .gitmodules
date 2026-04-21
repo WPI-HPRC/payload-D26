@@ -4,3 +4,9 @@
 [submodule "mars-board-definitions"]
 	path = mars-board-definitions
 	url = https://github.com/wpi-hprc/mars-board-definitions.git
+[submodule "telemetry-2026"]
+	path = telemetry-2026
+	url = https://github.com/wpi-hprc/telemetry-2026
+[submodule "lib/flatbuffers"]
+	path = lib/flatbuffers
+	url = https://github.com/google/flatbuffers

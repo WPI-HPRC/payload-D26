@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "Context.h"
 #include "State.h"
+#include "boilerplate/Sensors/Impl/LIV3F.h"
 #ifdef __has_include
   #if __has_include("states/States.h")
     #include "states/States.h"
@@ -32,6 +33,7 @@ Context ctx {
     .lsm = LSM6(&SENSORS_SPI, SENSORS_LSM_CS),
     .baro = LPS22(&SENSORS_SPI, SENSORS_LPS_CS),
     .mag = LIS2MDL(&SENSORS_SPI, SENSORS_LIS_CS),
+    .gps = LIV3F(GPS_SERIAL)
 };
 
 
@@ -95,6 +97,7 @@ void sensorLoop() {
     // manager is not being used here to get data
     if (millis() - last_print > 200)
     {
+        digitalWrite(LED_BLUE, !digitalRead(LED_BLUE));
         last_print = millis();
         loop_count++;
 
@@ -107,11 +110,11 @@ void sensorLoop() {
         const auto &lsm6_desc = ctx.lsm.get_descriptor();
         const auto &baro_desc = ctx.baro.get_descriptor();
         const auto &mag_desc = ctx.mag.get_descriptor();
-        // const auto &gps_desc = ctx.gps.get_descriptor();
+        const auto &gps_desc = ctx.gps.get_descriptor();
         // const auto &curr_desc = ctx.curr.get_descriptor();
 
         bool has_data = false;
-        // Print ASM330 data
+        // Print LSM6 data
         if (lsm6_desc.getLastUpdated() > 0)
         {
             Serial.print("LSM6DSO - Accel: ");
@@ -133,8 +136,29 @@ void sensorLoop() {
         {
             Serial.println("LSM6DSO: No data (timestamp = 0)");
         }
-        /*
 
+        // Print ASM330 data
+        if (asm330_desc.getLastUpdated() > 0)
+        {
+            Serial.print("ASM330 - Accel: ");
+            Serial.print(asm330_desc.data.accel0, 4);
+            Serial.print(", ");
+            Serial.print(asm330_desc.data.accel1, 4);
+            Serial.print(", ");
+            Serial.print(asm330_desc.data.accel2, 4);
+            Serial.print(" | Gyro: ");
+            Serial.print(asm330_desc.data.gyr0, 4);
+            Serial.print(", ");
+            Serial.print(asm330_desc.data.gyr1, 4);
+            Serial.print(", ");
+            Serial.print(asm330_desc.data.gyr2, 4);
+            Serial.println();
+            has_data = true;
+        }
+        else
+        {
+            Serial.println("LSM6DSO: No data (timestamp = 0)");
+        }
         // Print LPS22 data
         if (baro_desc.getLastUpdated() > 0)
         {
@@ -152,19 +176,7 @@ void sensorLoop() {
 
         if(mag_desc.getLastUpdated()  > 0)
         {
-            Serial.print("ICM20948 - Accel: ");
-            Serial.print(mag_desc.data.accel0, 4);
-            Serial.print(", ");
-            Serial.print(mag_desc.data.accel1, 4);
-            Serial.print(", ");
-            Serial.print(mag_desc.data.accel2, 4);
-            Serial.print(" | Gyro: ");
-            Serial.print(mag_desc.data.gyr0, 4);
-            Serial.print(", ");
-            Serial.print(mag_desc.data.gyr1, 4);
-            Serial.print(", ");
-            Serial.print(mag_desc.data.gyr2, 4);
-            Serial.print(" | Mag: ");
+            Serial.print("LIS2MDL - Mag: ");
             Serial.print(mag_desc.data.mag0, 4);
             Serial.print(", ");
             Serial.print(mag_desc.data.mag1, 4);
@@ -180,39 +192,24 @@ void sensorLoop() {
 
         if(gps_desc.getLastUpdated() > 0)
         {
-            Serial.print("MAX10S - Lat, Lon, AltMSL, AltElipsoid: ");
+            Serial.print("MAX10S - Lat, Lon, Alt: ");
             Serial.print(gps_desc.data.lat, 4);
             Serial.print(", ");
             Serial.print(gps_desc.data.lon, 4);
             Serial.print(", ");
-            Serial.print(gps_desc.data.altMSL, 4);
+            Serial.print(gps_desc.data.alt, 4);
             Serial.print(", ");
-            Serial.print(gps_desc.data.altEllipsoid, 4);
-            Serial.print("| GPS Lock Type - ");
-            Serial.print(gps_desc.data.gpsLockType);
+            Serial.print("| Satellites - ");
+            Serial.print(gps_desc.data.satellites);
             Serial.println();
             has_data = true;
         }
         else
         {
-            Serial.println("MAX10S: No data (timestamp = 0)");
-        }
-
-        if(curr_desc.getLastUpdated() > 0) {
-            Serial.print("INA219 - Curr: ");
-            Serial.println(curr_desc.data.curr, 4);
-            has_data = true;
-        } else {
-            Serial.println("INA219: No data (timestamp = 0)");
-        }
-
-        if (!has_data)
-        {
-            Serial.println("No sensor data received yet...");
+            Serial.println("LIV3F: No data (timestamp = 0)");
         }
 
         Serial.println("======================");
-        */
     }
 }
 
@@ -240,10 +237,14 @@ void setup() {
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
 
+    digitalWrite(LED_RED, HIGH);
+
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
     }
+
+    delay(200);
     
     // NOTE: Run initialization on the first state
     initStateData(&data);
@@ -259,6 +260,8 @@ void setup() {
     
     BLA::Matrix<3, 1> ecef = {0, 0, 0};
     // ctx.estimator.init(ecef, millis());
+
+    digitalWrite(LED_GREEN, HIGH);
 }
 
 void ekfLoop(Context *ctx) {
@@ -347,7 +350,7 @@ void loop() {
 
     sensorLoop();
 
-    if(ctx.ekfLooping) {
+    if(false && ctx.ekfLooping) {
         ekfLoop(&ctx);
     }
 

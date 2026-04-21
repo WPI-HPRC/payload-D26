@@ -74,11 +74,11 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
   }
 
   // if (gps_desc.data.gpsLockType == 3) {
-    if ((millis() - lastGreenToggleTime) > 250) {
-      lastGreenToggleTime = millis();
-      GreenLedState = !GreenLedState;
-      digitalWrite(LED_GREEN, GreenLedState);
-    }
+    // if ((millis() - lastGreenToggleTime) > 250) {
+    //   lastGreenToggleTime = millis();
+    //   GreenLedState = !GreenLedState;
+    //   digitalWrite(LED_GREEN, GreenLedState);
+    // }
   // }
 
   return PRELAUNCH;
