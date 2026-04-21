@@ -1,3 +1,4 @@
+#define TEMPLATE_STATES_OVERRIDE
 #include "../State.h"
 
 void abortInit (StateData* data) {}

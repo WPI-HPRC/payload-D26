@@ -1,3 +1,4 @@
+#define TEMPLATE_STATES_OVERRIDE
 #include "States.h"
 #include "../State.h"
 
