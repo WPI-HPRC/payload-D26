@@ -1,3 +1,4 @@
+#define TEMPLATE_STATES_OVERRIDE
 #include "../State.h"
 #include "Arduino.h"
 #include "StateMachineConstants.h"

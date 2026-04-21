@@ -2,12 +2,13 @@
 
 #include "Context.h"
 #ifdef __has_include
-  #if __has_include("states/States.h")
-    #include "states/States.h"
-  #else
+  #if defined(TEMPLATE_STATES_OVERRIDE)
     #include "template_states/States.h"
+  #elif __has_include("states/States.h")
+    #include "states/States.h"
   #endif
 #else
+  #warning No __has_include, falling back to template_states
   #include "template_states/States.h"
 #endif
 

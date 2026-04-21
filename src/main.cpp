@@ -1,14 +1,17 @@
 #include <Arduino.h>
 #include "Context.h"
-#include "State.h"
 #include "boilerplate/Sensors/Impl/LIV3F.h"
 #ifdef __has_include
   #if __has_include("states/States.h")
+    #include "State.h"
     #include "states/States.h"
   #else
     #include "template_states/States.h"
+    #define TEMPLATE_STATES_OVERRIDE
+    #include "State.h"
   #endif
 #else
+  #warning No __has_include, falling back to template_states
   #include "template_states/States.h"
 #endif
 

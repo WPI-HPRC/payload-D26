@@ -1,3 +1,4 @@
+#define TEMPLATE_STATES_OVERRIDE
 #include "../State.h"
 
 void coastInit (StateData* data) { }
