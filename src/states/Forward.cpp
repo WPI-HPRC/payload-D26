@@ -3,15 +3,11 @@
 #include <Servo.h>
 #include "Context.h"
 
-#define LEFT_MOTOR_PIN 0   // placeholder constants
-#define RIGHT_MOTOR_PIN 1
-#define PWM_CONST 90 
-#define PWM_COEF 1
-#define PWM_OFFSET 10
 
 void forwardInit (StateData* data) {
-    data->servo1.attach(LEFT_MOTOR_PIN);
-    data->servo2.attach(RIGHT_MOTOR_PIN);
+    SerialUSB.print("Entering Teleoporation");
+    data->left_motor.attach(LEFT_MOTOR_PIN);
+    data->right_motor.attach(RIGHT_MOTOR_PIN);
 }
 
 StateID ForwardLoop (StateData *data, Context *ctx) {
@@ -25,9 +21,9 @@ StateID ForwardLoop (StateData *data, Context *ctx) {
     float l_motor_pwm = (PWM_COEF * l_motor_vel) + PWM_OFFSET;
     float r_motor_pwm = (PWM_COEF * r_motor_vel) + PWM_OFFSET;
 
-    //Sets a PWM output
-    SerialUSB.print("Driving Forward");
-    data->servo1.write(l_motor_pwm);
-    data->servo2.write(r_motor_pwm);
-    return FORWARD; // does not exit state
+    //Set PWM outputs
+    data->left_motor.write(l_motor_pwm);
+    data->right_motor.write(r_motor_pwm);
+
+    return FORWARD; // always return for forward state
 }

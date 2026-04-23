@@ -7,4 +7,6 @@ StateLoopFunc loopFuncs[NUM_STATES] = {};
 
 void initStateMap() {
   initFuncs[FORWARD] = &forwardInit;
+  initFuncs[DRIVE_OUT] = &driveoutInit;
+  initFuncs[CONNECT] = &connectInit;
 }
