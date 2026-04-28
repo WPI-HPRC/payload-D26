@@ -30,4 +30,45 @@ StateID ForwardLoop (StateData *data, Context *ctx) {
     }
 
     return AUTO; // else: continue teleoperation
+
+    /*
+    if(robotState == ROBOT_ALIGNING_TAG)
+    {
+        if(hasTag)
+        {
+            Serial.println("Tag saw");
+            float centerX = 80.0;
+            float errorX = lastTag.cx - centerX;
+
+            float targetSize = 50;
+            float errorDist = targetSize - lastTag.w;
+
+            float Kp_turn = 0.02;
+            float Kp_forward = 0.3;
+
+            float turn = Kp_turn * errorX;
+            float forward = Kp_forward * errorDist;
+
+            if(abs(errorX) < 5) turn = 0;
+
+            if(forward > 8) forward = 8;
+            if(forward < -4) forward = -4;
+
+            chassis.SetTwist(forward, turn); // proportional control
+
+        
+            if(lastTag.w > 45) //tag width threshold
+            { 
+                chassis.FullStop();
+                robotState = ROBOT_IDLE;
+                Serial.println("Tag reached");
+                
+            }
+        }
+        else
+        {
+            chassis.SetTwist(0, 0.4);
+        }
+    }
+    */
 }
