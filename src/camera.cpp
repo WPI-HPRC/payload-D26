@@ -10,7 +10,7 @@ void setup() {
   Serial.begin(115200);
   Wire.begin(SLAVE_ADDR); // Initialize I2C as slave
   Wire.onReceive(receiveEvent); // Register receive callback
-  Serial.println("I2C Receiver Initialized");
+  Serial.println("SPI Receiver Initialized");
 }
 
 void loop() {

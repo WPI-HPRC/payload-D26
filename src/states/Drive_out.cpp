@@ -15,7 +15,7 @@ void driveoutInit (StateData* data) {
 
 StateID DriveOutLoop (StateData *data, Context *ctx) {
 
-    float l_motor_pwm = (PWM_COEF * PWM_CONST) + PWM_OFFSET;
+    float l_motor_pwm = (PWM_COEF * PWM_CONST) + PWM_OFFSET; // PWM CONST
     float r_motor_pwm = (PWM_COEF * PWM_CONST) + PWM_OFFSET;
 
     //Set PWM outputs
@@ -24,7 +24,7 @@ StateID DriveOutLoop (StateData *data, Context *ctx) {
 
     //update timer
     data->currentTime = millis();
-    data->deltaTime = data->currentTime - data->deltaTime;
+    data->deltaTime = data->currentTime - data->startTime;
 
     if (data->deltaTime > DRIVEOUT_TIME){
         return CONNECT; // deploy antenna when timer expired

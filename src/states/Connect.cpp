@@ -17,7 +17,7 @@ StateID ConnectLoop (StateData *data, Context *ctx) {
 
     //update timer
     data->currentTime = millis();
-    data->deltaTime = data->currentTime - data->deltaTime;
+    data->deltaTime = data->currentTime - data->startTime;
 
     if (data->connected){
         return TELEOP; //Connection succeeded, entering teleoperation
