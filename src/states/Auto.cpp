@@ -4,8 +4,8 @@
 #include "Context.h"
 
 
-void forwardInit (StateData* data) {
-    SerialUSB.print("Entering Driving Debug State");
+void teleopInit (StateData* data) {
+    SerialUSB.print("Entering Teleoporation");
     data->left_motor.attach(LEFT_MOTOR_PIN);
     data->right_motor.attach(RIGHT_MOTOR_PIN);
 }
@@ -25,5 +25,9 @@ StateID ForwardLoop (StateData *data, Context *ctx) {
     data->left_motor.write(l_motor_pwm);
     data->right_motor.write(r_motor_pwm);
 
-    return FORWARD; // always return for forward state
+    if (data->connected){
+        return TELEOP; // if connection made, enter teleoperation
+    }
+
+    return AUTO; // else: continue teleoperation
 }

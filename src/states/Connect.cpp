@@ -19,9 +19,13 @@ StateID ConnectLoop (StateData *data, Context *ctx) {
     data->currentTime = millis();
     data->deltaTime = data->currentTime - data->deltaTime;
 
-    if (data->deltaTime > CONNECTION_WAIT_LIMIT){
-        return CONNECT; // Connection failed, entering autonomous
+    if (data->connected){
+        return TELEOP; //Connection succeeded, entering teleoperation
     }
 
-    return CONNECT; // Connection succeeded, entering teleoperation
+    if (data->deltaTime > CONNECTION_WAIT_LIMIT){
+        return AUTO; // Connection failed, entering autonomous
+    }
+    
+    return CONNECT; // else: continue waiting for connection
 }

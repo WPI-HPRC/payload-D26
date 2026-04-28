@@ -43,6 +43,9 @@ struct StateData {
     Servo release_servo;
     float linear_vel;
     float angular_vel;
+
+    bool connected;
+
 };
 
 
@@ -50,6 +53,8 @@ struct StateData {
 void forwardInit(StateData *data);
 void driveoutInit(StateData *data);
 void connectInit(StateData *data);
+void autoInit(StateData *data);
+void teleopInit(StateData *data);
 StateID recoveryLoop (StateData* data, Context* ctx);
 
 

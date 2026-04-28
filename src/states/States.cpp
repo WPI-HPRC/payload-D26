@@ -9,4 +9,6 @@ void initStateMap() {
   initFuncs[FORWARD] = &forwardInit;
   initFuncs[DRIVE_OUT] = &driveoutInit;
   initFuncs[CONNECT] = &connectInit;
+  initFuncs[TELEOP] = &teleopInit;
+  initFuncs[AUTO] = &autoInit;
 }
