@@ -4,6 +4,7 @@ import sensor
 import time, image, struct
 import pyb
 from pyb import I2C
+from pyb import SPI
 
 #I2C
 peripheral = 0x12
@@ -16,6 +17,7 @@ sensor.set_framesize(sensor.QQVGA)
 sensor.set_quality() #0-100
 
 i2c = I2C(2, I2C.PERIHERAL, addr=peripheral)
+spi = SPI(2, SPI.MASTER, baudrate=600000, polarity=1, phase=0, crc=0x7)
 
 # Computer Vision
 debug = True
@@ -27,18 +29,18 @@ print("Initializing I2C")
 while (True):
     try:
         # take image an send of over I2C
-        if i2c.is_ready(peripheral):
+        if spi.is_ready(peripheral):
             img = sensor.snapshot()
             jpeg = img.compress(quality=50)
             size = len(jpeg)
 
             #send the size first
-            i2c.send(struct.pack("<H", size), timeout=1000)
+            spi.send(struct.pack("<H", size), timeout=1000)
 
             #send image in chunks
             chunk_size = 32
             for i in range(0, size, chunk_size):
-                i2c.send(jpeg[i:i+chunk_size], timeout=1000)
+                spi.send(jpeg[i:i+chunk_size], timeout=1000)
 
         # check for blobs, also send of I2C
         blobs = img.find_blobs([thresholds], pixels_threshold=200, area_threshold=200)
