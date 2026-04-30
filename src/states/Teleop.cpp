@@ -10,7 +10,7 @@ void teleopInit (StateData* data) {
     data->right_motor.attach(RIGHT_MOTOR_PIN);
 }
 
-StateID ForwardLoop (StateData *data, Context *ctx) {
+StateID TeleopLoop (StateData *data, Context *ctx) {
 
     float lin_vel = data->linear_vel;
     float ang_vel = data->angular_vel;

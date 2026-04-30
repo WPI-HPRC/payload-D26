@@ -4,13 +4,13 @@
 #include "Context.h"
 
 
-void teleopInit (StateData* data) {
+void autoInit (StateData* data) {
     SerialUSB.print("Entering Teleoporation");
     data->left_motor.attach(LEFT_MOTOR_PIN);
     data->right_motor.attach(RIGHT_MOTOR_PIN);
 }
 
-StateID ForwardLoop (StateData *data, Context *ctx) {
+StateID AutoLoop (StateData *data, Context *ctx) {
 
     float lin_vel = data->linear_vel;
     float ang_vel = data->angular_vel;
