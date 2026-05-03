@@ -2,16 +2,23 @@
 #include "States.h"
 #include <Servo.h>
 #include "Context.h"
+#include "camera.h"
 
 
 void teleopInit (StateData* data) {
     SerialUSB.print("Entering Teleoporation");
     data->left_motor.attach(LEFT_MOTOR_PIN);
     data->right_motor.attach(RIGHT_MOTOR_PIN);
+
+    camera_initialization();
 }
 
 StateID TeleopLoop (StateData *data, Context *ctx) {
 
+    // Collect Image Data
+    get_image();
+
+    // Handle Drive input
     float lin_vel = data->linear_vel;
     float ang_vel = data->angular_vel;
 
