@@ -46,6 +46,9 @@ struct StateData {
 
     bool connected;
 
+    float obstalce_centriod_x;
+    float obstacle_centriod_y;
+
 };
 
 
