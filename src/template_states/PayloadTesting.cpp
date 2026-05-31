@@ -28,7 +28,19 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
         
         diagnosticMessage += "\nImage receive complete\n\n";
         diagnosticMessage += "\nReceived base64 chars: " + String(incomingBase64.length());
-        diagnosticMessage += "\nExpected decoded bytes: " + String(expectedBytes);   
+        diagnosticMessage += "\nExpected decoded bytes: " + String(expectedBytes);  
+        diagnosticMessage += "\n\n Starting sending image back to PC...";
+
+        if(connector.startSendingImageData(incomingBase64, expectedBytes)) {
+            diagnosticMessage += "\nImage send initiated successfully.";
+        } else {
+            diagnosticMessage += "\nFailed to initiate image send.";
+        }
+         
+    }
+
+    if(connector.updateSendImageData()) {
+        diagnosticMessage += "\nImage send complete.";
     }
 
 

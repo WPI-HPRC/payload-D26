@@ -11,12 +11,18 @@ class boardToPCConnector {
 
         Status currentStatus = IDLE;
 
+        const String* outgoingBase64 = nullptr;
+        size_t outgoingDecodedBytes = 0;
+        size_t outgoingIndex = 0;
+
+        static constexpr size_t SEND_CHUNK_SIZE = 128;
+
+
     public:
 
-        /*
-        Sends image data to the PC in base64 format.
-        */
-        void sendImageData(const String& base64Image);
+        bool startSendingImageData(const String& base64Image, size_t decodedBytes);
+        bool updateSendImageData();
+        bool isBusy() const;
 
         /*
         Receives image data from the PC in base64 format, along with the expected byte size.
@@ -28,6 +34,6 @@ class boardToPCConnector {
          - It should also update internal state to track whether it's currently receiving an image and accumulate the incoming base64 data until completion.
          - Once "IMG_END" is received, it should set the provided references accordingly for further processing (e.g., decoding the image).
         */
-       boolean receiveImageData(String& base64Image, int& expectedBytes);
+       bool receiveImageData(String& base64Image, int& expectedBytes);
 
 };
