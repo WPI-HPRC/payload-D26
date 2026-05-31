@@ -334,7 +334,7 @@ void loop() {
         ctx.errorLogFile.printf("%d %d\n", newState, millis());
     }
 
-    sensorLoop();
+    //sensorLoop();
 
     if(false && ctx.ekfLooping) {
         ekfLoop(&ctx);
