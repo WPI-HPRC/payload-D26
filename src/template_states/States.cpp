@@ -20,6 +20,7 @@
     initFuncs[MAIN_DESCENT] = &mainDescentInit;
     initFuncs[RECOVERY] = &recoveryInit;
     initFuncs[ABORT] = &abortInit;
+    initFuncs[PAYLOAD_TESTING] = &payloadTestingInit;
 
     loopFuncs[PRELAUNCH] = &prelaunchLoop;
     loopFuncs[BOOST] = &boostLoop;
@@ -28,5 +29,6 @@
     loopFuncs[MAIN_DESCENT] = &mainDescentLoop;
     loopFuncs[RECOVERY] = &recoveryLoop;
     loopFuncs[ABORT] = &abortLoop;
+    loopFuncs[PAYLOAD_TESTING] = &payloadTestingLoop;
   }
 #endif

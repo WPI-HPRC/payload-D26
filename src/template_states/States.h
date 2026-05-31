@@ -11,6 +11,7 @@ enum StateID {
     MAIN_DESCENT,
     RECOVERY,
     ABORT,
+    PAYLOAD_TESTING,
     NUM_STATES
 };
 
@@ -54,3 +55,7 @@ StateID prelaunchLoop (StateData* data, Context* ctx);
 // RECOVERY
 void recoveryInit(StateData *data);
 StateID recoveryLoop (StateData* data, Context* ctx);
+
+// PAYLOAD_TESTING
+void payloadTestingInit(StateData *data);
+StateID payloadTestingLoop (StateData* data, Context* ctx);

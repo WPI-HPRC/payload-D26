@@ -82,5 +82,12 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
     // }
   // }
 
+  bool testingPayload = true;
+
+  if(testingPayload) {
+    Serial.println("TRANSITIONING TO PAYLOAD TESTING");
+    return PAYLOAD_TESTING;
+  }
+
   return PRELAUNCH;
 }
