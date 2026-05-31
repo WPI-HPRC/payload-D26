@@ -8,6 +8,7 @@
 #include "boilerplate/Sensors/Impl/LPS22.h"
 #include "boilerplate/Sensors/Impl/LSM6.h"
 #include "boilerplate/qmekf-lib/include/split_mekf.h"
+#include "multi-state-utils/ImageTransfers/boardToPCConnector.h"
 
 struct ASM330Data;
 struct LPS22Data;
