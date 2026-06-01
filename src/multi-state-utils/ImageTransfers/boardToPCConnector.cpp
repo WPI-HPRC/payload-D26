@@ -63,7 +63,6 @@ bool boardToPCConnector::receiveImageData(String& base64Image, int& expectedByte
         if (line.startsWith("IMG_BEGIN")) {
             receivingImage = true;
             incomingBase64 = "";
-            currentStatus = RECEIVING;
 
             int spaceIndex = line.indexOf(' ');
             bytesExpected = line.substring(spaceIndex + 1).toInt();
@@ -73,7 +72,6 @@ bool boardToPCConnector::receiveImageData(String& base64Image, int& expectedByte
             transferComplete = true;
             base64Image = incomingBase64;
             expectedBytes = bytesExpected;
-            currentStatus = IDLE;
         }
         else if (receivingImage) {
             incomingBase64 += line;
