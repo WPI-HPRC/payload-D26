@@ -2,6 +2,16 @@
 #include <string.h>
 #include <math.h>
 
+openMVReceiver::openMVReceiver(Stream* inputStream) :
+    inputStream(inputStream)
+{
+}
+
+void openMVReceiver::setInputStream(Stream* inputStream) {
+    this->inputStream = inputStream;
+    streamLineBuffer = "";
+}
+
 bool openMVReceiver::runReceiver() {
 
     String receivedData = "";
@@ -71,10 +81,6 @@ uint8_t openMVReceiver::queueSize() {
 }
 
 bool openMVReceiver::receiveData(String& outData, int& outByteCount) {
-    // This function should implement the actual data receiving logic, such as reading from a serial port or network socket.
-    // For demonstration purposes, we'll just return false to indicate no data received.
-
-
     // testing entry point for receiving data - this should be removed or replaced with actual receiving logic
     if(testInputData.length() > 0) {
         outData = testInputData;
@@ -83,6 +89,28 @@ bool openMVReceiver::receiveData(String& outData, int& outByteCount) {
         testInputData = ""; // clear test input after "receiving" it
 
         return true;
+    }
+
+    if(inputStream == nullptr) {
+        return false;
+    }
+
+    while(inputStream->available() > 0) {
+        char nextChar = static_cast<char>(inputStream->read());
+
+        if(nextChar == '\r') {
+            continue;
+        }
+
+        if(nextChar == '\n') {
+            outData = streamLineBuffer;
+            outByteCount = streamLineBuffer.length();
+            streamLineBuffer = "";
+
+            return outData.length() > 0;
+        }
+
+        streamLineBuffer += nextChar;
     }
 
     return false;
@@ -114,9 +142,25 @@ bool openMVReceiver::checkForTransmissionEnd(const String& receivedData) {
 
 void openMVReceiver::handleTransmissionStart(String& receivedData) {
     receiving = true;
+    incomingExpectedByteCount = parseExpectedByteCount(receivedData);
 
     receivedData.replace("IMG_BEGIN", ""); // remove the start marker from the data
+    receivedData = "";
 
+    makeRoomForNextImage();
+}
+
+int openMVReceiver::parseExpectedByteCount(const String& receivedData) {
+    int spaceIndex = receivedData.indexOf(' ');
+
+    if(spaceIndex < 0) {
+        return 0;
+    }
+
+    return receivedData.substring(spaceIndex + 1).toInt();
+}
+
+void openMVReceiver::makeRoomForNextImage() {
     if(currentQueueSize >= maxQueueSize) {
         for(int i = 1; i < maxQueueSize; i++) {
             imageQueue[i - 1] = imageQueue[i];
@@ -135,7 +179,12 @@ void openMVReceiver::handleTransmissionEnd(String& receivedData) {
     receivedData.replace("IMG_END", ""); // remove the end marker from the data
 
     // move to next spot in queue
+    if(incomingExpectedByteCount > 0) {
+        imageSizes[currentQueueSize] = incomingExpectedByteCount;
+    }
+
     currentQueueSize++;
+    incomingExpectedByteCount = 0;
     
     // currentQueueSize %= maxQueueSize; // wrap around if we exceed max queue size
    

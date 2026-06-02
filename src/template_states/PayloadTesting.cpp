@@ -1,7 +1,9 @@
 #define TEMPLATE_STATES_OVERRIDE
 #include "../State.h"
 #include <Arduino.h>
+#include <HardwareSerial.h>
 #include "../Context.h"
+#include "../multi-state-utils/ImageTransfers/openMVReceiver.h"
 
 
 /**
@@ -10,12 +12,18 @@
 
 // String diagnosticMessage = "";
 boardToPCConnector connector;
+openMVReceiver cameraReceiver;
+
+extern HardwareSerial CAMERA_SERIAL;
 
 bool imageReadyToSend = false;
 unsigned long receivedAt = 0;
 
 
-void payloadTestingInit(StateData *data) {}
+void payloadTestingInit(StateData *data) {
+    CAMERA_SERIAL.begin(921600);
+    cameraReceiver.setInputStream(&CAMERA_SERIAL);
+}
 
 
 
@@ -28,6 +36,12 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
     connector.updateSendImageData();
 
     if(!connector.isBusy()) {
+        if(cameraReceiver.runReceiver()) {
+            if(cameraReceiver.getImage(incomingBase64, expectedBytes)) {
+                imageReadyToSend = true;
+                receivedAt = millis();
+            }
+        }
 
         if(connector.receiveImageData(incomingBase64, expectedBytes)) {
             

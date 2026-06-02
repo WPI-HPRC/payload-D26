@@ -4,6 +4,9 @@
 
 class openMVReceiver {
     public:
+        openMVReceiver(Stream* inputStream = nullptr);
+
+        void setInputStream(Stream* inputStream);
         
         /**
          * master method to be run in update loop that runs all receiving and management processes of the receiver
@@ -31,6 +34,8 @@ class openMVReceiver {
     private:
 
         bool receiveData(String& outData, int& outByteCount);
+        void makeRoomForNextImage();
+        int parseExpectedByteCount(const String& receivedData);
 
 
         bool checkForTransmissionStart(const String& receivedData);
@@ -46,8 +51,11 @@ class openMVReceiver {
 
 
         bool receiving = false;
+        int incomingExpectedByteCount = 0;
 
         String testInputData = "";
+        Stream* inputStream = nullptr;
+        String streamLineBuffer = "";
         
 
         /// storage
