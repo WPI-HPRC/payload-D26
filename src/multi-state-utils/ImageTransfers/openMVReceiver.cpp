@@ -45,38 +45,17 @@ bool openMVReceiver::getImage(String& outBase64Data, int& outByteCount) {
         return false; // no images in queue
     }
 
-    uint8_t removedIndex = 0; // index of the image being removed from the queue
-    bool wrapped = false; // flag to indicate if we've wrapped around the circular queue
-
-    if(currentQueueSize <= maxQueueSize) {
-        outBase64Data = imageQueue[0]; // get the oldest image in the queue
-        outByteCount = imageSizes[0];
-
-    } else {
-        // this case should only happen if we exceed max queue size and start overwriting old images, so we just return one above the current spot in the queue
-        removedIndex = (currentQueueSize + 1) % maxQueueSize; // get the oldest image in the queue factoring in wrap around
-        outBase64Data = imageQueue[removedIndex];
-        outByteCount = imageSizes[removedIndex];
-        wrapped = true;
-    }
+    outBase64Data = imageQueue[0]; // get the oldest image in the queue
+    outByteCount = imageSizes[0];
 
     
     // shift remaining images forward in the queue
-    for(int i = removedIndex + 1; i < removedIndex + maxQueueSize && i < currentQueueSize; i++) {
-
-        uint8_t wrappedIndex = i % maxQueueSize; // wrap around index for circular queue
-
-        imageQueue[wrappedIndex - 1] = imageQueue[wrappedIndex];
-        imageSizes[wrappedIndex - 1] = imageSizes[wrappedIndex];
+    for(int i = 1; i < currentQueueSize; i++) {
+        imageQueue[i - 1] = imageQueue[i];
+        imageSizes[i - 1] = imageSizes[i];
     }
 
-    // clear the last spot in the queue after shifting
-    // if wrapped, the last spot is the one we just shifted from, otherwise it's just the current queue size - 1
-    uint8_t lastIndex = (removedIndex + maxQueueSize - 1) % maxQueueSize; // index of the last valid image in the queue after shifting
-
-    if(!wrapped) {
-        lastIndex = currentQueueSize - 1; // if we haven't wrapped, the last valid image is just the current queue size - 1
-    }
+    uint8_t lastIndex = currentQueueSize - 1;
 
     // clear the last spot in the queue
     imageQueue[lastIndex] = "";
@@ -137,6 +116,17 @@ void openMVReceiver::handleTransmissionStart(String& receivedData) {
     receiving = true;
 
     receivedData.replace("IMG_BEGIN", ""); // remove the start marker from the data
+
+    if(currentQueueSize >= maxQueueSize) {
+        for(int i = 1; i < maxQueueSize; i++) {
+            imageQueue[i - 1] = imageQueue[i];
+            imageSizes[i - 1] = imageSizes[i];
+        }
+
+        imageQueue[maxQueueSize - 1] = "";
+        imageSizes[maxQueueSize - 1] = 0;
+        currentQueueSize = maxQueueSize - 1;
+    }
 }
 
 void openMVReceiver::handleTransmissionEnd(String& receivedData) {
