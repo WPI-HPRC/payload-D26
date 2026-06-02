@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 
 class openMVReceiver {
@@ -13,7 +15,7 @@ class openMVReceiver {
          * get number of images stored in the queue
          * returns an integer number of stored photos
          */
-        uint8_t queueSize() { return currentQueueSize; };
+        uint8_t queueSize();
 
         /**
          * points parameters to the oldest string and metadata pair in the queue
@@ -51,7 +53,7 @@ class openMVReceiver {
         /// storage
         const static uint8_t maxQueueSize = 10;
         String imageQueue[maxQueueSize]; // Queue to hold incoming images
-        int imageSizes[maxQueueSize];
+        int imageSizes[maxQueueSize] = {};
         uint8_t currentQueueSize = 0;
 
 
