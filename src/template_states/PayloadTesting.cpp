@@ -7,15 +7,12 @@
 /**
  * PC - MARS image transfer 
  */
-String incomingBase64 = "";
-bool receivingImage = false;
-int expectedBytes = 0;
-String diagnosticMessage = "";
-bool imageReceived = false;
+
+// String diagnosticMessage = "";
 boardToPCConnector connector;
 
-static bool imageReadyToSend = false;
-static unsigned long receivedAt = 0;
+bool imageReadyToSend = false;
+unsigned long receivedAt = 0;
 
 
 void payloadTestingInit(StateData *data) {}
@@ -24,6 +21,9 @@ void payloadTestingInit(StateData *data) {}
 
 StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
+    static String incomingBase64 = "";
+    static int expectedBytes = 0;
+
     // Update send status if we're in the process of sending
     connector.updateSendImageData();
 
@@ -31,12 +31,10 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
         if(connector.receiveImageData(incomingBase64, expectedBytes)) {
             
-            imageReceived = true;
-            
-            diagnosticMessage += "\nImage receive complete\n\n";
-            diagnosticMessage += "\nReceived base64 chars: " + String(incomingBase64.length());
-            diagnosticMessage += "\nExpected decoded bytes: " + String(expectedBytes);  
-            diagnosticMessage += "\n\n Starting sending image back to PC...";
+            // diagnosticMessage += "\nImage receive complete\n\n";
+            // diagnosticMessage += "\nReceived base64 chars: " + String(incomingBase64.length());
+            // diagnosticMessage += "\nExpected decoded bytes: " + String(expectedBytes);  
+            // diagnosticMessage += "\n\n Starting sending image back to PC...";
 
             imageReadyToSend = true;
             receivedAt = millis();
@@ -45,11 +43,11 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
 
     if(imageReadyToSend && !connector.isBusy()) {
-        if(millis() - receivedAt > 6000) { // wait 6 seconds before sending back to PC to switch the python script
+        if(millis() - receivedAt > 6000.0) { // wait 6 seconds before sending back to PC to switch the python script
             if(connector.startSendingImageData(incomingBase64, expectedBytes)) {
-                diagnosticMessage += "\nImage send initiated successfully.";
+                // diagnosticMessage += "\nImage send initiated successfully.";
             } else {
-                diagnosticMessage += "\nFailed to initiate image send.";
+                // diagnosticMessage += "\nFailed to initiate image send.";
             }
             imageReadyToSend = false; // reset flag after attempting to send
         }
@@ -59,19 +57,19 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
 
 
-    static unsigned long last_print = 0;
+    // static unsigned long last_print = 0;
 
     /// Serial Readout
-    if (millis() - last_print > 2000 && !receivingImage && !connector.isBusy())
-    {
-        last_print = millis();
-        Serial.print("\n=== State = Payload Testing | Loop Count = ");
-        Serial.print(data->loopCount);
-        Serial.println(" ===");
+    // if (millis() - last_print > 2000 && !receivingImage && !connector.isBusy())
+    // {
+    //     last_print = millis();
+    //     Serial.print("\n=== State = Payload Testing | Loop Count = ");
+    //     Serial.print(data->loopCount);
+    //     Serial.println(" ===");
 
-        Serial.print("Image Transfer Status: ");
-        Serial.println(diagnosticMessage);
-    }
+    //     Serial.print("Image Transfer Status: ");
+    //     Serial.println(diagnosticMessage);
+    // }
 
     return PAYLOAD_TESTING;
 }
