@@ -99,10 +99,32 @@ void test_open_mv_receiver_drops_oldest_images_when_queue_is_overloaded(void)
     TEST_ASSERT_FALSE(receiver.getImage(receivedImage, receivedByteCount));
 }
 
+void test_open_mv_receiver_uses_img_begin_byte_count_metadata(void)
+{
+    openMVReceiver receiver;
+
+    const String base64Image = "QUJDREVGRw==";
+    const int decodedByteCount = 7;
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "IMG_BEGIN 7"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, base64Image));
+    TEST_ASSERT_TRUE(feedReceiverChunk(receiver, "IMG_END"));
+
+    String receivedImage = "";
+    int receivedByteCount = 0;
+
+    TEST_ASSERT_TRUE(receiver.getImage(receivedImage, receivedByteCount));
+    TEST_ASSERT_EQUAL_STRING(base64Image.c_str(), receivedImage.c_str());
+    TEST_ASSERT_EQUAL(decodedByteCount, receivedByteCount);
+
+    TEST_ASSERT_EQUAL_UINT8(0, receiver.queueSize());
+}
+
 int main(int argc, char** argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_open_mv_receiver_queues_and_returns_images_in_order);
     RUN_TEST(test_open_mv_receiver_drops_oldest_images_when_queue_is_overloaded);
+    RUN_TEST(test_open_mv_receiver_uses_img_begin_byte_count_metadata);
     return UNITY_END();
 }

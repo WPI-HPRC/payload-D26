@@ -1,7 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
 #include <string>
+
+class Stream {
+public:
+    virtual ~Stream() = default;
+    virtual int available() = 0;
+    virtual int read() = 0;
+};
 
 class String {
 public:
@@ -52,6 +60,31 @@ public:
         }
     }
 
+    int indexOf(char character) const
+    {
+        const size_t position = value.find(character);
+
+        if (position == std::string::npos) {
+            return -1;
+        }
+
+        return static_cast<int>(position);
+    }
+
+    String substring(int start) const
+    {
+        if (start < 0 || static_cast<size_t>(start) >= value.length()) {
+            return "";
+        }
+
+        return value.substr(static_cast<size_t>(start));
+    }
+
+    long toInt() const
+    {
+        return std::strtol(value.c_str(), nullptr, 10);
+    }
+
     String& operator=(const char* rhs)
     {
         value = rhs ? rhs : "";
@@ -63,6 +96,12 @@ public:
     String& operator+=(const String& rhs)
     {
         value += rhs.value;
+        return *this;
+    }
+
+    String& operator+=(char rhs)
+    {
+        value += rhs;
         return *this;
     }
 
