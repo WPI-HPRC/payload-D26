@@ -11,8 +11,8 @@ PORT = "COM22"
 BAUD = 115200
 
 project_root = Path(__file__).parent.parent
-OUTPUT_FOLDER = project_root / "images" / "test-transfers" / "received"
-OUTPUT_EXTENSION = ".png"
+OUTPUT_FOLDER = project_root / "images" / "received" / "feed"
+OUTPUT_EXTENSION = ".jpg"
 
 SERIAL_TIMEOUT_SECONDS = 0.05
 
@@ -46,6 +46,8 @@ def decode_and_write_image(base64_text: str, expected_bytes: int):
 
     print(f"[INFO] Decoded bytes: {len(image_bytes)}")
     print(f"[INFO] Expected bytes: {expected_bytes}")
+    if expected_bytes >= 0:
+        print(f"[INFO] Decoded byte delta: {len(image_bytes) - expected_bytes}")
 
     if expected_bytes >= 0 and len(image_bytes) != expected_bytes:
         print("[WARN] Decoded byte count does not match expected size")
@@ -103,6 +105,10 @@ def handle_line(line, state):
     if not line:
         return
 
+    if line.startswith("DBG_"):
+        print(f"[BOARD] {line}")
+        return
+
     if line.startswith("IMG_BEGIN"):
         print("[INFO] IMG_BEGIN received")
 
@@ -134,6 +140,10 @@ def handle_line(line, state):
         base64_text = "".join(base64_chunks)
         print(f"[INFO] Received chunks: {len(base64_chunks)}")
         print(f"[INFO] Total base64 chars: {len(base64_text)}")
+        if expected_bytes >= 0:
+            expected_base64_chars = 4 * ((expected_bytes + 2) // 3)
+            print(f"[INFO] Expected base64 chars: {expected_base64_chars}")
+            print(f"[INFO] Base64 char delta: {len(base64_text) - expected_base64_chars}")
 
         decode_and_write_image(base64_text, expected_bytes)
 

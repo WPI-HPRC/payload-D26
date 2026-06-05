@@ -40,9 +40,11 @@ class openMVReceiver {
 
         bool checkForTransmissionStart(const String& receivedData);
         bool checkForTransmissionEnd(const String& receivedData);
+        bool checkForDiagnosticLine(const String& receivedData);
 
         void handleTransmissionStart(String& receivedData);
         void handleTransmissionEnd(String& receivedData);
+        int expectedBase64Chars(int decodedByteCount);
 
         void handleTransmission(String& receivedData, String& queueLoc, int& byteCount);
 
@@ -52,6 +54,8 @@ class openMVReceiver {
 
         bool receiving = false;
         int incomingExpectedByteCount = 0;
+        int incomingBase64CharCount = 0;
+        int incomingChunkCount = 0;
 
         String testInputData = "";
         Stream* inputStream = nullptr;

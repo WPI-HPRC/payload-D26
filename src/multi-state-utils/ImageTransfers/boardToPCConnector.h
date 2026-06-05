@@ -14,8 +14,10 @@ class boardToPCConnector {
         const String* outgoingBase64 = nullptr;
         size_t outgoingDecodedBytes = 0;
         size_t outgoingIndex = 0;
+        size_t outgoingChunksSent = 0;
 
         static constexpr size_t SEND_CHUNK_SIZE = 128;
+        size_t expectedBase64Chars(size_t decodedBytes) const;
 
 
     public:

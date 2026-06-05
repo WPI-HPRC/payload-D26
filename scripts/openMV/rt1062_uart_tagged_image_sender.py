@@ -8,9 +8,9 @@ from machine import UART
 UART_BUS = 1
 BAUDRATE = 921600
 CHUNK_SIZE = 128
-FRAME_INTERVAL_MS = 1000
+FRAME_INTERVAL_MS = 500
 
-FRAME_SIZE = csi.QQVGA
+FRAME_SIZE = csi.QQQVGA
 JPEG_QUALITY = 50
 
 
@@ -25,7 +25,7 @@ def setup_camera():
     if hasattr(cam, "quality"):
         cam.quality(JPEG_QUALITY)
 
-    cam.snapshot(time=2000)
+    cam.snapshot(time=1000)
     return cam
 
 
@@ -42,6 +42,12 @@ def compressed_jpeg_bytes(cam):
 
 def write_base64_lines(uart, image_bytes):
     encoded = binascii.b2a_base64(image_bytes).strip()
+    chunks = (len(encoded) + CHUNK_SIZE - 1) // CHUNK_SIZE
+
+    uart.write(
+        "DBG_OPENMV_BEGIN jpeg_bytes=%d base64_chars=%d chunks=%d chunk_size=%d\n"
+        % (len(image_bytes), len(encoded), chunks, CHUNK_SIZE)
+    )
 
     uart.write("IMG_BEGIN %d\n" % len(image_bytes))
 
@@ -50,6 +56,10 @@ def write_base64_lines(uart, image_bytes):
         uart.write("\n")
 
     uart.write("IMG_END\n")
+    uart.write(
+        "DBG_OPENMV_END jpeg_bytes=%d base64_chars=%d chunks=%d\n"
+        % (len(image_bytes), len(encoded), chunks)
+    )
 
 
 camera = setup_camera()

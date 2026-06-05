@@ -1,5 +1,13 @@
 #include "boardToPCConnector.h"
 
+size_t boardToPCConnector::expectedBase64Chars(size_t decodedBytes) const {
+    if (decodedBytes == 0) {
+        return 0;
+    }
+
+    return 4 * ((decodedBytes + 2) / 3);
+}
+
 bool boardToPCConnector::startSendingImageData(
     const String& base64Image,
     size_t decodedBytes
@@ -12,6 +20,18 @@ bool boardToPCConnector::startSendingImageData(
     outgoingBase64 = &base64Image;
     outgoingDecodedBytes = decodedBytes;
     outgoingIndex = 0;
+    outgoingChunksSent = 0;
+
+    Serial.print("DBG_MARS_PC_BEGIN expected_jpeg_bytes=");
+    Serial.print(outgoingDecodedBytes);
+    Serial.print(" base64_chars=");
+    Serial.print(outgoingBase64->length());
+    Serial.print(" expected_base64_chars=");
+    Serial.print(expectedBase64Chars(outgoingDecodedBytes));
+    Serial.print(" base64_delta=");
+    Serial.print(static_cast<long>(outgoingBase64->length()) - static_cast<long>(expectedBase64Chars(outgoingDecodedBytes)));
+    Serial.print(" chunk_size=");
+    Serial.println(SEND_CHUNK_SIZE);
 
     Serial.print("IMG_BEGIN ");
     Serial.println(outgoingDecodedBytes);
@@ -31,15 +51,28 @@ bool boardToPCConnector::updateSendImageData() {
         Serial.println(outgoingBase64->substring(outgoingIndex, outgoingIndex + len));
 
         outgoingIndex += len;
+        outgoingChunksSent++;
 
         return false; // still sending
     }
 
     Serial.println("IMG_END");
 
+    Serial.print("DBG_MARS_PC_END expected_jpeg_bytes=");
+    Serial.print(outgoingDecodedBytes);
+    Serial.print(" base64_chars_sent=");
+    Serial.print(outgoingIndex);
+    Serial.print(" chunks_sent=");
+    Serial.print(outgoingChunksSent);
+    Serial.print(" expected_base64_chars=");
+    Serial.print(expectedBase64Chars(outgoingDecodedBytes));
+    Serial.print(" base64_delta=");
+    Serial.println(static_cast<long>(outgoingIndex) - static_cast<long>(expectedBase64Chars(outgoingDecodedBytes)));
+
     outgoingBase64 = nullptr;
     outgoingDecodedBytes = 0;
     outgoingIndex = 0;
+    outgoingChunksSent = 0;
     currentStatus = IDLE;
 
     return true; // finished

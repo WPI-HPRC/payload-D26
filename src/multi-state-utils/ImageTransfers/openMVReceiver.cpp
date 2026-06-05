@@ -19,6 +19,11 @@ bool openMVReceiver::runReceiver() {
 
     if(receiveData(receivedData, receivedByteCount)) {
 
+        if(checkForDiagnosticLine(receivedData)) {
+            Serial.println(receivedData);
+            return false;
+        }
+
         // check for the start of a transmission and start the receiving chain writing to the next open spot in the queue
         if(checkForTransmissionStart(receivedData)) {
             handleTransmissionStart(receivedData);
@@ -140,9 +145,20 @@ bool openMVReceiver::checkForTransmissionEnd(const String& receivedData) {
     return retVal;
 }   
 
+bool openMVReceiver::checkForDiagnosticLine(const String& receivedData) {
+    return receivedData.startsWith("DBG_");
+}
+
 void openMVReceiver::handleTransmissionStart(String& receivedData) {
     receiving = true;
     incomingExpectedByteCount = parseExpectedByteCount(receivedData);
+    incomingBase64CharCount = 0;
+    incomingChunkCount = 0;
+
+    Serial.print("DBG_MARS_CAMERA_BEGIN expected_jpeg_bytes=");
+    Serial.print(incomingExpectedByteCount);
+    Serial.print(" expected_base64_chars=");
+    Serial.println(expectedBase64Chars(incomingExpectedByteCount));
 
     receivedData.replace("IMG_BEGIN", ""); // remove the start marker from the data
     receivedData = "";
@@ -158,6 +174,14 @@ int openMVReceiver::parseExpectedByteCount(const String& receivedData) {
     }
 
     return receivedData.substring(spaceIndex + 1).toInt();
+}
+
+int openMVReceiver::expectedBase64Chars(int decodedByteCount) {
+    if(decodedByteCount <= 0) {
+        return 0;
+    }
+
+    return 4 * ((decodedByteCount + 2) / 3);
 }
 
 void openMVReceiver::makeRoomForNextImage() {
@@ -178,6 +202,19 @@ void openMVReceiver::handleTransmissionEnd(String& receivedData) {
 
     receivedData.replace("IMG_END", ""); // remove the end marker from the data
 
+    int expectedChars = expectedBase64Chars(incomingExpectedByteCount);
+
+    Serial.print("DBG_MARS_CAMERA_END expected_jpeg_bytes=");
+    Serial.print(incomingExpectedByteCount);
+    Serial.print(" base64_chars=");
+    Serial.print(incomingBase64CharCount);
+    Serial.print(" expected_base64_chars=");
+    Serial.print(expectedChars);
+    Serial.print(" base64_delta=");
+    Serial.print(incomingBase64CharCount - expectedChars);
+    Serial.print(" chunks=");
+    Serial.println(incomingChunkCount);
+
     // move to next spot in queue
     if(incomingExpectedByteCount > 0) {
         imageSizes[currentQueueSize] = incomingExpectedByteCount;
@@ -195,4 +232,6 @@ void openMVReceiver::handleTransmission(String& receivedData, String& queueLoc, 
     
     queueLoc += receivedData;
     byteCount += receivedData.length(); // Assuming each chunk is the length of the received data
+    incomingBase64CharCount += receivedData.length();
+    incomingChunkCount++;
 }
