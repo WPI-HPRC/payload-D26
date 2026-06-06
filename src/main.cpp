@@ -2,7 +2,10 @@
 #include "Context.h"
 #include "boilerplate/Sensors/Impl/LIV3F.h"
 #ifdef __has_include
-  #if __has_include("states/States.h")
+  #if __has_include("payload_states/States.h")
+    #include "State.h"
+    #include "payload_states/States.h"
+  #elif __has_include("states/States.h")
     #include "State.h"
     #include "states/States.h"
   #else
@@ -215,7 +218,7 @@ void sensorLoop() {
 }
 
 void setup() {
-    currentState = PRELAUNCH;
+    currentState = PAYLOAD_IDLE;
     data = {};
 
     initStateMap();

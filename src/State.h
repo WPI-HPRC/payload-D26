@@ -4,6 +4,8 @@
 #ifdef __has_include
   #if defined(TEMPLATE_STATES_OVERRIDE)
     #include "template_states/States.h"
+  #elif __has_include("payload_states/States.h")
+    #include "payload_states/States.h"
   #elif __has_include("states/States.h")
     #include "states/States.h"
   #endif

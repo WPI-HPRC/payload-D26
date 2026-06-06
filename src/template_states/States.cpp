@@ -1,5 +1,5 @@
 #ifdef __has_include
-  #if !__has_include("../states/States.h")
+  #if !__has_include("../payload_states/States.h") && !__has_include("../states/States.h")
     #define TEMPLATE_STATES_OVERRIDE
   #endif
 #endif
