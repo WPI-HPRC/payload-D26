@@ -23,6 +23,8 @@ bool noDelay = false; // set to true to skip the 6 second wait before sending ba
 
 
 void payloadTestingInit(StateData *data) {
+
+    /// Initialize serial communication with the camera
     CAMERA_SERIAL.begin(115200);
     cameraReceiver.setInputStream(&CAMERA_SERIAL);
 }
@@ -31,69 +33,47 @@ void payloadTestingInit(StateData *data) {
 
 StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
+    /// For testing purposes, this state will receive image data from the camera and send it back to the PC. The Python script on the PC will print out the size of the received image data to verify that the transfer is working correctly.
     static String incomingBase64 = "";
     static int expectedBytes = 0;
 
-    if(cameraReceiver.runReceiver()) {
 
-        // Serial.println("\n=== Image Transfer Completed ===");
+    /**
+     * MARS <- Camera image reception protocol:
+     */
+
+    /// Receive image data from camera
+    if(cameraReceiver.runReceiver()) {
 
         if(cameraReceiver.getImage(incomingBase64, expectedBytes)) {
             imageReadyToSend = true;
             noDelay = true; // for testing purposes, set to true to skip the 6 second wait before sending back to PC
             receivedAt = millis();
-
-            // Serial.println("\n=== Retrived Image From Queue ===");
         }
     }
 
-    // Update send status if we're in the process of sending
+    /**
+     * MARS -> PC image transfer protocol:
+     */
+
+    /// Update send status if we're in the process of sending
     connector.updateSendImageData();
 
+    /// If we're not currently busy sending an image, check if we have a new image ready to send back to the PC
     if(!connector.isBusy()) {
-       
-
         if(connector.receiveImageData(incomingBase64, expectedBytes)) {
-            
-            // diagnosticMessage += "\nImage receive complete\n\n";
-            // diagnosticMessage += "\nReceived base64 chars: " + String(incomingBase64.length());
-            // diagnosticMessage += "\nExpected decoded bytes: " + String(expectedBytes);  
-            // diagnosticMessage += "\n\n Starting sending image back to PC...";
-
             imageReadyToSend = true;
             receivedAt = millis();
         }
     }
 
-
+    /// If we have an image ready to send to PC and we're not currently busy sending, start the sending process (after a delay to allow the PC script to switch to receive mode)
     if(imageReadyToSend && !connector.isBusy()) {
         if(millis() - receivedAt > 6000.0 || noDelay) { // wait 6 seconds before sending back to PC to switch the python script
-            if(connector.startSendingImageData(incomingBase64, expectedBytes)) {
-                // diagnosticMessage += "\nImage send initiated successfully.";
-            } else {
-                // diagnosticMessage += "\nFailed to initiate image send.";
-            }
+            connector.startSendingImageData(incomingBase64, expectedBytes);
             imageReadyToSend = false; // reset flag after attempting to send
         }
     }
-
-   
-
-
-
-    // static unsigned long last_print = 0;
-
-    /// Serial Readout
-    // if (millis() - last_print > 2000 && !receivingImage && !connector.isBusy())
-    // {
-    //     last_print = millis();
-    //     Serial.print("\n=== State = Payload Testing | Loop Count = ");
-    //     Serial.print(data->loopCount);
-    //     Serial.println(" ===");
-
-    //     Serial.print("Image Transfer Status: ");
-    //     Serial.println(diagnosticMessage);
-    // }
 
     return PAYLOAD_TESTING;
 }
