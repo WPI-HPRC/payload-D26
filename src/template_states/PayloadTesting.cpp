@@ -23,7 +23,7 @@ bool noDelay = false; // set to true to skip the 6 second wait before sending ba
 
 
 void payloadTestingInit(StateData *data) {
-    CAMERA_SERIAL.begin(921600);
+    CAMERA_SERIAL.begin(115200);
     cameraReceiver.setInputStream(&CAMERA_SERIAL);
 }
 

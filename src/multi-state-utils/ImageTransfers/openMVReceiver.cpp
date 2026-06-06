@@ -155,11 +155,6 @@ void openMVReceiver::handleTransmissionStart(String& receivedData) {
     incomingBase64CharCount = 0;
     incomingChunkCount = 0;
 
-    Serial.print("DBG_MARS_CAMERA_BEGIN expected_jpeg_bytes=");
-    Serial.print(incomingExpectedByteCount);
-    Serial.print(" expected_base64_chars=");
-    Serial.println(expectedBase64Chars(incomingExpectedByteCount));
-
     receivedData.replace("IMG_BEGIN", ""); // remove the start marker from the data
     receivedData = "";
 
@@ -229,6 +224,9 @@ void openMVReceiver::handleTransmissionEnd(String& receivedData) {
 
 void openMVReceiver::handleTransmission(String& receivedData, String& queueLoc, int& byteCount) {
     // This function should implement the logic to handle the incoming data and store it in the provided queue location.
+    if(receivedData.length() == 0) {
+        return;
+    }
     
     queueLoc += receivedData;
     byteCount += receivedData.length(); // Assuming each chunk is the length of the received data

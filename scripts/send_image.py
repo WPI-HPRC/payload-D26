@@ -5,7 +5,7 @@ import time
 
 # get the file path of the image relative to this script
 project_root = Path(__file__).parent.parent
-image_path = project_root / "images" / "test-transfers" / "image.png"
+image_path = project_root / "images" / "test-transfers" / "150.jpg"
 
 # Update this to your serial port
 PORT = "COM22"

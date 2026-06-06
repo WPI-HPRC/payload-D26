@@ -6,3 +6,4 @@ compile_commands.json
 tools
 lib/telemetry-generated
 images/test-transfers/received
+images/received/feed
