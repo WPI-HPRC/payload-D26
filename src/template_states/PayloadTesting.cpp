@@ -2,6 +2,7 @@
 #include "../State.h"
 #include <Arduino.h>
 #include <HardwareSerial.h>
+#include <stm32h753xx.h>
 #include "../Context.h"
 #include "../multi-state-utils/ImageTransfers/openMVReceiver.h"
 
@@ -18,6 +19,7 @@ extern HardwareSerial CAMERA_SERIAL;
 
 bool imageReadyToSend = false;
 unsigned long receivedAt = 0;
+bool noDelay = false; // set to true to skip the 6 second wait before sending back to PC (for testing purposes)
 
 
 void payloadTestingInit(StateData *data) {
@@ -32,16 +34,24 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
     static String incomingBase64 = "";
     static int expectedBytes = 0;
 
+    if(cameraReceiver.runReceiver()) {
+
+        // Serial.println("\n=== Image Transfer Completed ===");
+
+        if(cameraReceiver.getImage(incomingBase64, expectedBytes)) {
+            imageReadyToSend = true;
+            noDelay = true; // for testing purposes, set to true to skip the 6 second wait before sending back to PC
+            receivedAt = millis();
+
+            // Serial.println("\n=== Retrived Image From Queue ===");
+        }
+    }
+
     // Update send status if we're in the process of sending
     connector.updateSendImageData();
 
     if(!connector.isBusy()) {
-        if(cameraReceiver.runReceiver()) {
-            if(cameraReceiver.getImage(incomingBase64, expectedBytes)) {
-                imageReadyToSend = true;
-                receivedAt = millis();
-            }
-        }
+       
 
         if(connector.receiveImageData(incomingBase64, expectedBytes)) {
             
@@ -57,7 +67,7 @@ StateID payloadTestingLoop (StateData* data, Context* ctx) {
 
 
     if(imageReadyToSend && !connector.isBusy()) {
-        if(millis() - receivedAt > 6000.0) { // wait 6 seconds before sending back to PC to switch the python script
+        if(millis() - receivedAt > 6000.0 || noDelay) { // wait 6 seconds before sending back to PC to switch the python script
             if(connector.startSendingImageData(incomingBase64, expectedBytes)) {
                 // diagnosticMessage += "\nImage send initiated successfully.";
             } else {
