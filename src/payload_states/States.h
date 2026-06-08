@@ -5,6 +5,7 @@
 
 enum StateID {
     PAYLOAD_SELF_RIGHTING,
+    PAYLOAD_LATCH_RELEASING,
     PAYLOAD_DEPLOYING,
     PAYLOAD_DEPLOYED,
     PAYLOAD_CONNECTING,
@@ -31,6 +32,10 @@ struct StateData {
 // PAYLOAD_SELF_RIGHTING
 void payloadSelfRightingInit(StateData *data);
 StateID payloadSelfRightingLoop(StateData *data, Context *ctx);
+
+// PAYLOAD_LATCH_RELEASING
+void payloadLatchReleasingInit(StateData *data);
+StateID payloadLatchReleasingLoop(StateData *data, Context *ctx);
 
 // PAYLOAD_DEPLOYING
 void payloadDeployingInit(StateData *data);

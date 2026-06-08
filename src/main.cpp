@@ -26,6 +26,7 @@
 #include <Wire.h>
 #include <HardwareSerial.h>
 #include <SPI.h>
+#include "multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
@@ -34,6 +35,7 @@ TwoWire CONNECTOR_I2C(CONNECTOR_I2C_SDA, CONNECTOR_I2C_SCL);
 SPIClass CAMERA_SPI(CAMERA_MOSI, CAMERA_MISO, CAMERA_SCK);
 HardwareSerial RADIO_SERIAL(RADIO_SERIAL_RX, RADIO_SERIAL_TX);
 HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
+AntennaConnectorInterface antennaConnector;
 
 Context ctx {
     .asm330 = ASM330(&SENSORS_SPI, SENSORS_ASM_CS),

@@ -6,6 +6,7 @@ StateLoopFunc loopFuncs[NUM_STATES] = {};
 
 void initStateMap() {
     initFuncs[PAYLOAD_SELF_RIGHTING] = &payloadSelfRightingInit;
+    initFuncs[PAYLOAD_LATCH_RELEASING] = &payloadLatchReleasingInit;
     initFuncs[PAYLOAD_DEPLOYING] = &payloadDeployingInit;
     initFuncs[PAYLOAD_DEPLOYED] = &payloadDeployedInit;
     initFuncs[PAYLOAD_CONNECTING] = &payloadConnectingInit;
@@ -15,6 +16,7 @@ void initStateMap() {
     initFuncs[PAYLOAD_IDLE] = &payloadIdleInit;
 
     loopFuncs[PAYLOAD_SELF_RIGHTING] = &payloadSelfRightingLoop;
+    loopFuncs[PAYLOAD_LATCH_RELEASING] = &payloadLatchReleasingLoop;
     loopFuncs[PAYLOAD_DEPLOYING] = &payloadDeployingLoop;
     loopFuncs[PAYLOAD_DEPLOYED] = &payloadDeployedLoop;
     loopFuncs[PAYLOAD_CONNECTING] = &payloadConnectingLoop;

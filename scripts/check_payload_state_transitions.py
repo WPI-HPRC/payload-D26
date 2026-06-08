@@ -8,6 +8,7 @@ STATE_DIR = ROOT / "src" / "payload_states"
 
 STATES = {
     "PAYLOAD_SELF_RIGHTING": ("payloadSelfRightingInit", "payloadSelfRightingLoop", "PayloadSelfRighting.cpp"),
+    "PAYLOAD_LATCH_RELEASING": ("payloadLatchReleasingInit", "payloadLatchReleasingLoop", "PayloadLatchReleasing.cpp"),
     "PAYLOAD_DEPLOYING": ("payloadDeployingInit", "payloadDeployingLoop", "PayloadDeploying.cpp"),
     "PAYLOAD_DEPLOYED": ("payloadDeployedInit", "payloadDeployedLoop", "PayloadDeployed.cpp"),
     "PAYLOAD_CONNECTING": ("payloadConnectingInit", "payloadConnectingLoop", "PayloadConnecting.cpp"),
