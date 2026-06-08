@@ -27,6 +27,7 @@
 #include <HardwareSerial.h>
 #include <SPI.h>
 #include "multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
+#include <Servo.h>
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
@@ -36,6 +37,13 @@ SPIClass CAMERA_SPI(CAMERA_MOSI, CAMERA_MISO, CAMERA_SCK);
 HardwareSerial RADIO_SERIAL(RADIO_SERIAL_RX, RADIO_SERIAL_TX);
 HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 AntennaConnectorInterface antennaConnector;
+
+
+/// Actuators
+Servo latchServo;
+Servo antennaServo;
+
+
 
 Context ctx {
     .asm330 = ASM330(&SENSORS_SPI, SENSORS_ASM_CS),
@@ -269,10 +277,7 @@ void ekfLoop(Context *ctx) {
     const auto &mag_desc = ctx->mag.get_descriptor();
     const auto &gps_desc = ctx->gps.get_descriptor();
 
-    bool inAir = currentState == BOOST ||
-                 currentState == COAST ||
-                 currentState == DROGUE_DESCENT ||
-                 currentState == MAIN_DESCENT;
+    bool inAir = false;
 
     // Accel and gyro becuase they are on the same sensor
     if(asm330_desc.getLastUpdated() > last_accel_time) {
