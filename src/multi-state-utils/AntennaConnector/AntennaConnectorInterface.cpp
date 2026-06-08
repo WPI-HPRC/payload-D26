@@ -1,6 +1,14 @@
 #include "AntennaConnectorInterface.h"
 
 bool AntennaConnectorInterface::hasConnection() {
+
+    /// real entry point
+    /**
+     * Nic - this is where GNC can interface 
+     */
+
+
+    /// test hook: if simulated connection is enabled, return true until the duration has passed
     if (simulatedConnectionEnabled) {
         uint32_t now = millis();
 
