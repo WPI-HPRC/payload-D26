@@ -1,24 +1,22 @@
-#include "openMVReceiver.h"
+#include "OpenMVReceiver.h"
 #include <string.h>
 #include <math.h>
 
-openMVReceiver::openMVReceiver(Stream* inputStream) :
+OpenMVReceiver::OpenMVReceiver(Stream* inputStream) :
     inputStream(inputStream)
 {
 }
 
-void openMVReceiver::setInputStream(Stream* inputStream) {
+void OpenMVReceiver::setInputStream(Stream* inputStream) {
     this->inputStream = inputStream;
     streamLineBuffer = "";
 }
 
-bool openMVReceiver::runReceiver() {
-
+bool OpenMVReceiver::runReceiver() {
     String receivedData = "";
     int receivedByteCount = 0;
 
     if(receiveData(receivedData, receivedByteCount)) {
-
         if(checkForDiagnosticLine(receivedData)) {
             Serial.println(receivedData);
             return false;
@@ -31,68 +29,53 @@ bool openMVReceiver::runReceiver() {
 
         if(checkForTransmissionEnd(receivedData)) {
             handleTransmissionEnd(receivedData);
-
             return true;
         }
 
         if(receiving) {
-
-            uint8_t queueLoc = currentQueueSize % maxQueueSize; // write to the current open spot in the queue
-
-
+            uint8_t queueLoc = currentQueueSize % maxQueueSize;
             handleTransmission(receivedData, imageQueue[queueLoc], imageSizes[queueLoc]);
         }
-
-
     }
 
     return false;
-
 }
 
-void openMVReceiver::testInput(const String& testInput, int& inputLength) {
+void OpenMVReceiver::testInput(const String& testInput, int& inputLength) {
     testInputData = testInput;
     inputLength = testInput.length();
 }
 
-bool openMVReceiver::getImage(String& outBase64Data, int& outByteCount) {
+bool OpenMVReceiver::getImage(String& outBase64Data, int& outByteCount) {
     if(currentQueueSize == 0) {
-        return false; // no images in queue
+        return false;
     }
 
-    outBase64Data = imageQueue[0]; // get the oldest image in the queue
+    outBase64Data = imageQueue[0];
     outByteCount = imageSizes[0];
 
-    
-    // shift remaining images forward in the queue
     for(int i = 1; i < currentQueueSize; i++) {
         imageQueue[i - 1] = imageQueue[i];
         imageSizes[i - 1] = imageSizes[i];
     }
 
     uint8_t lastIndex = currentQueueSize - 1;
-
-    // clear the last spot in the queue
     imageQueue[lastIndex] = "";
     imageSizes[lastIndex] = 0;
-
-    currentQueueSize--; // decrease queue size
+    currentQueueSize--;
 
     return true;
 }
 
-uint8_t openMVReceiver::queueSize() {
+uint8_t OpenMVReceiver::queueSize() {
     return currentQueueSize;
 }
 
-bool openMVReceiver::receiveData(String& outData, int& outByteCount) {
-    // testing entry point for receiving data - this should be removed or replaced with actual receiving logic
+bool OpenMVReceiver::receiveData(String& outData, int& outByteCount) {
     if(testInputData.length() > 0) {
         outData = testInputData;
         outByteCount = testInputData.length();
-
-        testInputData = ""; // clear test input after "receiving" it
-
+        testInputData = "";
         return true;
     }
 
@@ -121,47 +104,31 @@ bool openMVReceiver::receiveData(String& outData, int& outByteCount) {
     return false;
 }
 
-bool openMVReceiver::checkForTransmissionStart(const String& receivedData) {
-    
-    bool retVal = false;
-
-
-    // TODO: get more robust start checking using a contains check instead of starts with 
-    if(receivedData.startsWith("IMG_BEGIN")) {
-        retVal = true;
-    }
-
-    return retVal;
+bool OpenMVReceiver::checkForTransmissionStart(const String& receivedData) {
+    return receivedData.startsWith("IMG_BEGIN");
 }
 
-bool openMVReceiver::checkForTransmissionEnd(const String& receivedData) {
-    
-    bool retVal = false;
+bool OpenMVReceiver::checkForTransmissionEnd(const String& receivedData) {
+    return receivedData.endsWith("IMG_END");
+}
 
-    if(receivedData.endsWith("IMG_END")) {
-        retVal = true;
-    }
-
-    return retVal;
-}   
-
-bool openMVReceiver::checkForDiagnosticLine(const String& receivedData) {
+bool OpenMVReceiver::checkForDiagnosticLine(const String& receivedData) {
     return receivedData.startsWith("DBG_");
 }
 
-void openMVReceiver::handleTransmissionStart(String& receivedData) {
+void OpenMVReceiver::handleTransmissionStart(String& receivedData) {
     receiving = true;
     incomingExpectedByteCount = parseExpectedByteCount(receivedData);
     incomingBase64CharCount = 0;
     incomingChunkCount = 0;
 
-    receivedData.replace("IMG_BEGIN", ""); // remove the start marker from the data
+    receivedData.replace("IMG_BEGIN", "");
     receivedData = "";
 
     makeRoomForNextImage();
 }
 
-int openMVReceiver::parseExpectedByteCount(const String& receivedData) {
+int OpenMVReceiver::parseExpectedByteCount(const String& receivedData) {
     int spaceIndex = receivedData.indexOf(' ');
 
     if(spaceIndex < 0) {
@@ -171,7 +138,7 @@ int openMVReceiver::parseExpectedByteCount(const String& receivedData) {
     return receivedData.substring(spaceIndex + 1).toInt();
 }
 
-int openMVReceiver::expectedBase64Chars(int decodedByteCount) {
+int OpenMVReceiver::expectedBase64Chars(int decodedByteCount) {
     if(decodedByteCount <= 0) {
         return 0;
     }
@@ -179,7 +146,7 @@ int openMVReceiver::expectedBase64Chars(int decodedByteCount) {
     return 4 * ((decodedByteCount + 2) / 3);
 }
 
-void openMVReceiver::makeRoomForNextImage() {
+void OpenMVReceiver::makeRoomForNextImage() {
     if(currentQueueSize >= maxQueueSize) {
         for(int i = 1; i < maxQueueSize; i++) {
             imageQueue[i - 1] = imageQueue[i];
@@ -192,10 +159,10 @@ void openMVReceiver::makeRoomForNextImage() {
     }
 }
 
-void openMVReceiver::handleTransmissionEnd(String& receivedData) {
+void OpenMVReceiver::handleTransmissionEnd(String& receivedData) {
     receiving = false;
 
-    receivedData.replace("IMG_END", ""); // remove the end marker from the data
+    receivedData.replace("IMG_END", "");
 
     int expectedChars = expectedBase64Chars(incomingExpectedByteCount);
 
@@ -210,26 +177,21 @@ void openMVReceiver::handleTransmissionEnd(String& receivedData) {
     Serial.print(" chunks=");
     Serial.println(incomingChunkCount);
 
-    // move to next spot in queue
     if(incomingExpectedByteCount > 0) {
         imageSizes[currentQueueSize] = incomingExpectedByteCount;
     }
 
     currentQueueSize++;
     incomingExpectedByteCount = 0;
-    
-    // currentQueueSize %= maxQueueSize; // wrap around if we exceed max queue size
-   
 }
 
-void openMVReceiver::handleTransmission(String& receivedData, String& queueLoc, int& byteCount) {
-    // This function should implement the logic to handle the incoming data and store it in the provided queue location.
+void OpenMVReceiver::handleTransmission(String& receivedData, String& queueLoc, int& byteCount) {
     if(receivedData.length() == 0) {
         return;
     }
     
     queueLoc += receivedData;
-    byteCount += receivedData.length(); // Assuming each chunk is the length of the received data
+    byteCount += receivedData.length();
     incomingBase64CharCount += receivedData.length();
     incomingChunkCount++;
 }

@@ -1,9 +1,9 @@
 #include <unity.h>
 
-#include "multi-state-utils/ImageTransfers/openMVReceiver.h"
-#include "multi-state-utils/ImageTransfers/openMVReceiver.cpp"
+#include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
+#include "multi-state-utils/ImageTransfers/OpenMVReceiver.cpp"
 
-static bool feedReceiverChunk(openMVReceiver& receiver, const String& input)
+static bool feedReceiverChunk(OpenMVReceiver& receiver, const String& input)
 {
     int inputLength = 0;
     receiver.testInput(input, inputLength);
@@ -13,7 +13,7 @@ static bool feedReceiverChunk(openMVReceiver& receiver, const String& input)
     return receiver.runReceiver();
 }
 
-static void feedCompleteImage(openMVReceiver& receiver, const String& image)
+static void feedCompleteImage(OpenMVReceiver& receiver, const String& image)
 {
     TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "IMG_BEGIN"));
     TEST_ASSERT_FALSE(feedReceiverChunk(receiver, image));
@@ -30,7 +30,7 @@ void tearDown(void)
 
 void test_open_mv_receiver_queues_and_returns_images_in_order(void)
 {
-    openMVReceiver receiver;
+    OpenMVReceiver receiver;
 
     const String imageOne = "image_01: nose cone visible";
     const String imageTwo = "image_02: payload bay centered";
@@ -63,7 +63,7 @@ void test_open_mv_receiver_queues_and_returns_images_in_order(void)
 
 void test_open_mv_receiver_drops_oldest_images_when_queue_is_overloaded(void)
 {
-    openMVReceiver receiver;
+    OpenMVReceiver receiver;
 
     const String images[] = {
         "image_01: launch rail closeup",
@@ -101,7 +101,7 @@ void test_open_mv_receiver_drops_oldest_images_when_queue_is_overloaded(void)
 
 void test_open_mv_receiver_uses_img_begin_byte_count_metadata(void)
 {
-    openMVReceiver receiver;
+    OpenMVReceiver receiver;
 
     const String base64Image = "QUJDREVGRw==";
     const int decodedByteCount = 7;

@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
-class openMVReceiver {
+class OpenMVReceiver {
     public:
-        openMVReceiver(Stream* inputStream = nullptr);
+        OpenMVReceiver(Stream* inputStream = nullptr);
 
         void setInputStream(Stream* inputStream);
         
@@ -27,16 +27,12 @@ class openMVReceiver {
          */
         bool getImage(String& outBase64Data, int& outByteCount);
 
-
         void testInput(const String& testInput, int& inputLength);
 
-
     private:
-
         bool receiveData(String& outData, int& outByteCount);
         void makeRoomForNextImage();
         int parseExpectedByteCount(const String& receivedData);
-
 
         bool checkForTransmissionStart(const String& receivedData);
         bool checkForTransmissionEnd(const String& receivedData);
@@ -48,10 +44,6 @@ class openMVReceiver {
 
         void handleTransmission(String& receivedData, String& queueLoc, int& byteCount);
 
-        
-
-
-
         bool receiving = false;
         int incomingExpectedByteCount = 0;
         int incomingBase64CharCount = 0;
@@ -61,13 +53,8 @@ class openMVReceiver {
         Stream* inputStream = nullptr;
         String streamLineBuffer = "";
         
-
-        /// storage
         const static uint8_t maxQueueSize = 10;
-        String imageQueue[maxQueueSize]; // Queue to hold incoming images
+        String imageQueue[maxQueueSize];
         int imageSizes[maxQueueSize] = {};
         uint8_t currentQueueSize = 0;
-
-
-
 };

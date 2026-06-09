@@ -24,6 +24,8 @@ void driveBehavior() {
 
 void getAmperageInfo() {
     // TODO: update antennaConnector sensor values from real current and voltage sensors.
+
+    // possibly cut due to space constraints so implementing last
 }
 
 /**

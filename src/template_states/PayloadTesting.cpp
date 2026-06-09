@@ -4,7 +4,7 @@
 #include <HardwareSerial.h>
 #include <stm32h753xx.h>
 #include "../Context.h"
-#include "../multi-state-utils/ImageTransfers/openMVReceiver.h"
+#include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
 
 
 /**
@@ -13,7 +13,7 @@
 
 // String diagnosticMessage = "";
 boardToPCConnector connector;
-openMVReceiver cameraReceiver;
+OpenMVReceiver cameraReceiver;
 
 extern HardwareSerial CAMERA_SERIAL;
 
