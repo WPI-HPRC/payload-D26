@@ -53,7 +53,7 @@ class OpenMVReceiver {
         Stream* inputStream = nullptr;
         String streamLineBuffer = "";
         
-        const static uint8_t maxQueueSize = 3;
+        const static uint8_t maxQueueSize = 1;
         String imageQueue[maxQueueSize];
         int imageSizes[maxQueueSize] = {};
         uint8_t currentQueueSize = 0;

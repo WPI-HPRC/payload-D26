@@ -10,10 +10,15 @@ extern ScrewDriveInterface screwDrive;
 extern OpenMVReceiver openMVReceiver;
 extern HardwareSerial CAMERA_SERIAL;
 
-static constexpr bool ENABLE_ROV_IMAGE_TRANSMISSION = false;
+static constexpr bool ENABLE_ROV_IMAGE_TRANSMISSION = true;
 static constexpr uint32_t DRIVE_DEBUG_INTERVAL_MS = 250;
+static constexpr bool ENABLE_ROV_DEBUG = false;
 
 void printDriveDebugJson(bool armed, const AntennaConnectorInterface::DriveData& driveData) {
+    if (!ENABLE_ROV_DEBUG) {
+        return;
+    }
+
     Serial.print("{\"type\":\"debug\",\"source\":\"rovDrive\",\"armed\":");
     Serial.print(armed ? "true" : "false");
     Serial.print(",\"speed\":");
@@ -32,7 +37,9 @@ void printDriveDebugJson(bool armed, const AntennaConnectorInterface::DriveData&
 }
 
 void handleConnectionLost() {
-    Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"connectionLost\"}");
+    if (ENABLE_ROV_DEBUG) {
+        Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"connectionLost\"}");
+    }
 }
 
 void handleRovSerialInput() {
@@ -49,9 +56,7 @@ void handleRovSerialInput() {
 
     if(input.startsWith("{")) {
         bool handled = antennaSerialTransmitter.handleIncomingPacket(input);
-        Serial.print("{\"type\":\"debug\",\"source\":\"rovJson\",\"handled\":");
-        Serial.print(handled ? "true" : "false");
-        Serial.println("}");
+        (void)handled;
         return;
     }
 
@@ -59,9 +64,11 @@ void handleRovSerialInput() {
         uint32_t duration = input.substring(input.indexOf(' ') + 1).toInt();
         antennaConnector.simulateConnectionFor(duration);
 
-        Serial.print("{\"type\":\"debug\",\"source\":\"rovCommand\",\"command\":\"simulate_connection\",\"durationMs\":");
-        Serial.print(duration);
-        Serial.println("}");
+        if (ENABLE_ROV_DEBUG) {
+            Serial.print("{\"type\":\"debug\",\"source\":\"rovCommand\",\"command\":\"simulate_connection\",\"durationMs\":");
+            Serial.print(duration);
+            Serial.println("}");
+        }
         return;
     }
 
@@ -74,13 +81,17 @@ void handleRovSerialInput() {
             float turn = input.substring(secondSpace + 1).toFloat();
             antennaConnector.setDriveData(speed, turn);
 
-            Serial.print("{\"type\":\"debug\",\"source\":\"manualDrive\",\"speed\":");
-            Serial.print(speed, 3);
-            Serial.print(",\"turn\":");
-            Serial.print(turn, 3);
-            Serial.println("}");
+            if (ENABLE_ROV_DEBUG) {
+                Serial.print("{\"type\":\"debug\",\"source\":\"manualDrive\",\"speed\":");
+                Serial.print(speed, 3);
+                Serial.print(",\"turn\":");
+                Serial.print(turn, 3);
+                Serial.println("}");
+            }
         } else {
-            Serial.println("{\"type\":\"debug\",\"source\":\"manualDrive\",\"error\":\"invalid_format\"}");
+            if (ENABLE_ROV_DEBUG) {
+                Serial.println("{\"type\":\"debug\",\"source\":\"manualDrive\",\"error\":\"invalid_format\"}");
+            }
         }
 
         return;
@@ -95,15 +106,19 @@ void handleRovSerialInput() {
             float value = input.substring(secondSpace + 1).toFloat();
             bool ok = antennaConnector.setSensorValue(parameterName, value);
 
-            Serial.print("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"ok\":");
-            Serial.print(ok ? "true" : "false");
-            Serial.print(",\"name\":\"");
-            Serial.print(parameterName);
-            Serial.print("\",\"value\":");
-            Serial.print(value, 3);
-            Serial.println("}");
+            if (ENABLE_ROV_DEBUG) {
+                Serial.print("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"ok\":");
+                Serial.print(ok ? "true" : "false");
+                Serial.print(",\"name\":\"");
+                Serial.print(parameterName);
+                Serial.print("\",\"value\":");
+                Serial.print(value, 3);
+                Serial.println("}");
+            }
         } else {
-            Serial.println("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"error\":\"invalid_format\"}");
+            if (ENABLE_ROV_DEBUG) {
+                Serial.println("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"error\":\"invalid_format\"}");
+            }
         }
 
         return;
@@ -119,13 +134,15 @@ void handleRovSerialInput() {
         float value = 0.0f;
         bool ok = antennaConnector.getSensorValue(parameterName, value);
 
-        Serial.print("{\"type\":\"debug\",\"source\":\"sensorGet\",\"ok\":");
-        Serial.print(ok ? "true" : "false");
-        Serial.print(",\"name\":\"");
-        Serial.print(parameterName);
-        Serial.print("\",\"value\":");
-        Serial.print(value, 3);
-        Serial.println("}");
+        if (ENABLE_ROV_DEBUG) {
+            Serial.print("{\"type\":\"debug\",\"source\":\"sensorGet\",\"ok\":");
+            Serial.print(ok ? "true" : "false");
+            Serial.print(",\"name\":\"");
+            Serial.print(parameterName);
+            Serial.print("\",\"value\":");
+            Serial.print(value, 3);
+            Serial.println("}");
+        }
     }
 }
 
@@ -160,7 +177,9 @@ void driveBehavior() {
 }
 
 void payloadROVInit(StateData *data) {
-    Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
+    if (ENABLE_ROV_DEBUG) {
+        Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
+    }
 
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
     screwDrive.beginArm();

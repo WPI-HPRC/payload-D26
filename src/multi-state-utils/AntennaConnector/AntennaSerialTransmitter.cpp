@@ -72,17 +72,10 @@ bool AntennaSerialTransmitter::handleIncomingPacket(const String& packet) {
     float turn = 0.0f;
 
     if (!parseDriveCommand(packet, speed, turn)) {
-        Serial.println("{\"type\":\"debug\",\"source\":\"antennaRx\",\"event\":\"unrecognizedJson\"}");
         return false;
     }
 
     antennaConnector->setDriveData(speed, turn);
-
-    Serial.print("{\"type\":\"debug\",\"source\":\"antennaRx\",\"event\":\"driveCommand\",\"speed\":");
-    Serial.print(speed, 3);
-    Serial.print(",\"turn\":");
-    Serial.print(turn, 3);
-    Serial.println("}");
 
     return true;
 }
@@ -267,15 +260,7 @@ bool AntennaSerialTransmitter::parseDriveCommand(const String& packet, float& sp
 }
 
 void AntennaSerialTransmitter::printDebugThrottled(const char* message) {
-    static uint32_t lastDebugPrintAt = 0;
-    uint32_t now = millis();
-
-    if (now - lastDebugPrintAt < 1000) {
-        return;
-    }
-
-    Serial.println(message);
-    lastDebugPrintAt = now;
+    (void)message;
 }
 
 void AntennaSerialTransmitter::finishImageTransfer() {
