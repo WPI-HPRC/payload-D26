@@ -4,6 +4,47 @@
 
 class AntennaConnectorInterface {
   public:
+    struct SensorData {
+        float leftScrewCurrent = 0.0f;
+        float rightScrewCurrent = 0.0f;
+        float batteryVoltage = 0.0f;
+
+        /**
+         * Set one rover-to-antenna sensor value by parameter name.
+         * Supported names: leftScrewCurrent, rightScrewCurrent, batteryVoltage.
+         */
+        bool setValue(const String &parameterName, float value);
+
+        /**
+         * Read one rover-to-antenna sensor value by parameter name.
+         * Returns false if the parameter name is not supported.
+         */
+        bool getValue(const String &parameterName, float &value) const;
+
+        /**
+         * Return all rover-to-antenna sensor values as a compact JSON object.
+         */
+        String getAllJson() const;
+    };
+
+    struct DriveData {
+        float speed = 0.0f;
+        float turn = 0.0f;
+
+        /**
+         * Set antenna-to-rover drive inputs. Values are normalized to [-1.0, 1.0].
+         */
+        void set(float speedInput, float turnInput);
+
+        /**
+         * Read the current antenna-to-rover drive inputs.
+         */
+        void get(float &speedOutput, float &turnOutput) const;
+    };
+
+    SensorData sensorData;
+    DriveData driveData;
+
     /**
      * Minimum amount of time, in milliseconds, that hasConnection() must stay true
      * before onConnectionGained() confirms the connection.
@@ -71,6 +112,33 @@ class AntennaConnectorInterface {
      * simulated connection.
      */
     void reset();
+
+    /**
+     * Set one rover-to-antenna sensor value by parameter name.
+     * Supported names: leftScrewCurrent, rightScrewCurrent, batteryVoltage.
+     */
+    bool setSensorValue(const String &parameterName, float value);
+
+    /**
+     * Read one rover-to-antenna sensor value by parameter name.
+     * Returns false if the parameter name is not supported.
+     */
+    bool getSensorValue(const String &parameterName, float &value) const;
+
+    /**
+     * Return all rover-to-antenna sensor values as a compact JSON object.
+     */
+    String getAllSensorDataJson() const;
+
+    /**
+     * Set antenna-to-rover drive inputs. Values are normalized to [-1.0, 1.0].
+     */
+    void setDriveData(float speed, float turn);
+
+    /**
+     * Read the current antenna-to-rover drive inputs.
+     */
+    DriveData getDriveData() const;
 
   private:
     bool rawConnection = false;
