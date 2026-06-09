@@ -31,6 +31,7 @@
 #include "multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 #include <Servo.h>
 #include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
+#include <SoftwareSerial.h>
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
@@ -42,7 +43,12 @@ HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 AntennaConnectorInterface antennaConnector;
 AntennaSerialTransmitter antennaSerialTransmitter(&Serial, &antennaConnector);
 ScrewDriveInterface screwDrive;
-OpenMVReceiver openMVReceiver(&CAMERA_SERIAL);
+
+
+// alternate solution to repining conflict
+SoftwareSerial SOFT_CAM_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
+
+OpenMVReceiver openMVReceiver(&SOFT_CAM_SERIAL);
 
 /// Actuators
 Servo latchServo;
