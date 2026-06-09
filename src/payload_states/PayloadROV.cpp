@@ -1,70 +1,68 @@
 #include "../State.h"
 #include "../multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
+#include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
+#include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
 
-
-extern AntennaConnectorInterface antennaConnector; // Create an instance of the antenna connector interface
+extern AntennaConnectorInterface antennaConnector;
+extern AntennaSerialTransmitter antennaSerialTransmitter;
 extern ScrewDriveInterface screwDrive;
+extern OpenMVReceiver openMVReceiver;
+extern HardwareSerial CAMERA_SERIAL;
 
+static constexpr bool ENABLE_ROV_IMAGE_TRANSMISSION = false;
+static constexpr uint32_t DRIVE_DEBUG_INTERVAL_MS = 250;
+
+void printDriveDebugJson(bool armed, const AntennaConnectorInterface::DriveData& driveData) {
+    Serial.print("{\"type\":\"debug\",\"source\":\"rovDrive\",\"armed\":");
+    Serial.print(armed ? "true" : "false");
+    Serial.print(",\"speed\":");
+    Serial.print(driveData.speed, 3);
+    Serial.print(",\"turn\":");
+    Serial.print(driveData.turn, 3);
+    Serial.print(",\"leftEffort\":");
+    Serial.print(screwDrive.getLastLeftEffort(), 3);
+    Serial.print(",\"rightEffort\":");
+    Serial.print(screwDrive.getLastRightEffort(), 3);
+    Serial.print(",\"leftPulseUs\":");
+    Serial.print(screwDrive.getLastLeftPulseUs());
+    Serial.print(",\"rightPulseUs\":");
+    Serial.print(screwDrive.getLastRightPulseUs());
+    Serial.println("}");
+}
 
 void handleConnectionLost() {
-    // Placeholder for actions to take once connection is lost
-    // This might involve activating certain hardware or sending a message
-    Serial.println("Connection lost! Performing post-connection lost actions...");
-    Serial.println("Exiting Payload ROV State...");
+    Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"connectionLost\"}");
 }
 
-void driveBehavior() {
-    AntennaConnectorInterface::DriveData driveData = antennaConnector.getDriveData();
-
-    if (screwDrive.updateArm()) {
-        screwDrive.drive(driveData.speed, driveData.turn);
+void handleRovSerialInput() {
+    if(!Serial.available()) {
+        return;
     }
-}
 
-void getAmperageInfo() {
-    // TODO: update antennaConnector sensor values from real current and voltage sensors.
+    String input = Serial.readStringUntil('\n');
+    input.trim();
 
-    // possibly cut due to space constraints so implementing last
-}
+    if(input.length() == 0) {
+        return;
+    }
 
-/**
- * Nic - this simulates antenna behavior grabbing images for processing and transmission
- */
-void passImages() {
-    // Placeholder for actions to take to pass images from the ROV
-    // This might involve activating certain hardware or sending a message
-}
-
-
-void payloadROVInit(StateData *data) {
-    Serial.println("Entered Payload ROV State...");
-    screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
-    screwDrive.beginArm();
-}
-
-StateID payloadROVLoop(StateData *data, Context *ctx) {
-
-    String input = "";
-    
-    if(Serial.available()) {
-        input = Serial.readStringUntil('\n');
-        input.trim();
+    if(input.startsWith("{")) {
+        bool handled = antennaSerialTransmitter.handleIncomingPacket(input);
+        Serial.print("{\"type\":\"debug\",\"source\":\"rovJson\",\"handled\":");
+        Serial.print(handled ? "true" : "false");
+        Serial.println("}");
+        return;
     }
 
     if(input.startsWith("simulate_connection")) {
+        uint32_t duration = input.substring(input.indexOf(' ') + 1).toInt();
+        antennaConnector.simulateConnectionFor(duration);
 
-        uint32_t duration = input.substring(input.indexOf(' ') + 1).toInt(); // Get the duration from the command
-
-        if(duration > 0) {
-            Serial.print("Simulating connection for ");
-            Serial.print(duration);
-            Serial.println(" ms...");
-        } else {
-            Serial.println("Invalid duration for simulate_connection command. Please provide a positive integer value in milliseconds.");
-        }
-
-        antennaConnector.simulateConnectionFor(duration); // Simulate a connection for the specified duration
+        Serial.print("{\"type\":\"debug\",\"source\":\"rovCommand\",\"command\":\"simulate_connection\",\"durationMs\":");
+        Serial.print(duration);
+        Serial.println("}");
+        return;
     }
 
     if(input.startsWith("drive ")) {
@@ -76,13 +74,16 @@ StateID payloadROVLoop(StateData *data, Context *ctx) {
             float turn = input.substring(secondSpace + 1).toFloat();
             antennaConnector.setDriveData(speed, turn);
 
-            Serial.print("Drive data set speed=");
+            Serial.print("{\"type\":\"debug\",\"source\":\"manualDrive\",\"speed\":");
             Serial.print(speed, 3);
-            Serial.print(" turn=");
-            Serial.println(turn, 3);
+            Serial.print(",\"turn\":");
+            Serial.print(turn, 3);
+            Serial.println("}");
         } else {
-            Serial.println("Invalid drive command. Use: drive <speed> <turn>");
+            Serial.println("{\"type\":\"debug\",\"source\":\"manualDrive\",\"error\":\"invalid_format\"}");
         }
+
+        return;
     }
 
     if(input.startsWith("sensor ")) {
@@ -92,42 +93,102 @@ StateID payloadROVLoop(StateData *data, Context *ctx) {
         if(secondSpace > firstSpace) {
             String parameterName = input.substring(firstSpace + 1, secondSpace);
             float value = input.substring(secondSpace + 1).toFloat();
+            bool ok = antennaConnector.setSensorValue(parameterName, value);
 
-            if(antennaConnector.setSensorValue(parameterName, value)) {
-                Serial.print("Sensor value set ");
-                Serial.print(parameterName);
-                Serial.print("=");
-                Serial.println(value, 3);
-            } else {
-                Serial.print("Unknown sensor parameter: ");
-                Serial.println(parameterName);
-            }
+            Serial.print("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"ok\":");
+            Serial.print(ok ? "true" : "false");
+            Serial.print(",\"name\":\"");
+            Serial.print(parameterName);
+            Serial.print("\",\"value\":");
+            Serial.print(value, 3);
+            Serial.println("}");
         } else {
-            Serial.println("Invalid sensor command. Use: sensor <name> <value>");
+            Serial.println("{\"type\":\"debug\",\"source\":\"sensorCommand\",\"error\":\"invalid_format\"}");
         }
+
+        return;
     }
 
     if(input == "sensor_json") {
         Serial.println(antennaConnector.getAllSensorDataJson());
+        return;
     }
 
     if(input.startsWith("sensor_get ")) {
         String parameterName = input.substring(input.indexOf(' ') + 1);
         float value = 0.0f;
+        bool ok = antennaConnector.getSensorValue(parameterName, value);
 
-        if(antennaConnector.getSensorValue(parameterName, value)) {
-            Serial.print(parameterName);
-            Serial.print("=");
-            Serial.println(value, 3);
-        } else {
-            Serial.print("Unknown sensor parameter: ");
-            Serial.println(parameterName);
+        Serial.print("{\"type\":\"debug\",\"source\":\"sensorGet\",\"ok\":");
+        Serial.print(ok ? "true" : "false");
+        Serial.print(",\"name\":\"");
+        Serial.print(parameterName);
+        Serial.print("\",\"value\":");
+        Serial.print(value, 3);
+        Serial.println("}");
+    }
+}
+
+void driveBehavior() {
+    AntennaConnectorInterface::DriveData driveData = antennaConnector.getDriveData();
+    bool armed = screwDrive.updateArm();
+
+    if (armed) {
+        screwDrive.drive(driveData.speed, driveData.turn);
+    }
+
+    static uint32_t lastDriveDebugAt = 0;
+    static float lastSpeed = 999.0f;
+    static float lastTurn = 999.0f;
+    static uint16_t lastLeftPulse = 0;
+    static uint16_t lastRightPulse = 0;
+
+    uint32_t now = millis();
+    bool commandChanged = abs(driveData.speed - lastSpeed) > 0.001f ||
+                          abs(driveData.turn - lastTurn) > 0.001f;
+    bool pulseChanged = screwDrive.getLastLeftPulseUs() != lastLeftPulse ||
+                        screwDrive.getLastRightPulseUs() != lastRightPulse;
+
+    if (commandChanged || pulseChanged || now - lastDriveDebugAt >= DRIVE_DEBUG_INTERVAL_MS) {
+        printDriveDebugJson(armed, driveData);
+        lastDriveDebugAt = now;
+        lastSpeed = driveData.speed;
+        lastTurn = driveData.turn;
+        lastLeftPulse = screwDrive.getLastLeftPulseUs();
+        lastRightPulse = screwDrive.getLastRightPulseUs();
+    }
+}
+
+void payloadROVInit(StateData *data) {
+    Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
+
+    screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
+    screwDrive.beginArm();
+
+    CAMERA_SERIAL.begin(115200);
+    openMVReceiver.setInputStream(&CAMERA_SERIAL);
+
+    antennaSerialTransmitter.setOutputStream(&Serial);
+    antennaSerialTransmitter.setAntennaConnector(&antennaConnector);
+}
+
+StateID payloadROVLoop(StateData *data, Context *ctx) {
+    handleRovSerialInput();
+
+    if (ENABLE_ROV_IMAGE_TRANSMISSION) {
+        String imageData = "";
+        int byteCount = 0;
+
+        if (openMVReceiver.runReceiver() && antennaConnector.canAcceptImages()) {
+            if (openMVReceiver.getImage(imageData, byteCount)) {
+                antennaConnector.intakeImageData(imageData, byteCount);
+            }
         }
+
+        antennaSerialTransmitter.runTransmitter();
     }
 
     driveBehavior();
-    getAmperageInfo();
-    passImages();
 
     if (antennaConnector.onConnectionLost()) {
         handleConnectionLost();

@@ -108,6 +108,14 @@ float ScrewDriveInterface::getLastRightEffort() const {
     return lastRightEffort;
 }
 
+uint16_t ScrewDriveInterface::getLastLeftPulseUs() const {
+    return lastLeftPulseUs;
+}
+
+uint16_t ScrewDriveInterface::getLastRightPulseUs() const {
+    return lastRightPulseUs;
+}
+
 float ScrewDriveInterface::clampUnit(float value) const {
     return constrain(value, -1.0f, 1.0f);
 }
@@ -136,11 +144,13 @@ uint16_t ScrewDriveInterface::effortToPulseUs(float effort) const {
 void ScrewDriveInterface::writeEfforts(float leftEffort, float rightEffort) {
     lastLeftEffort = applyOutputScaling(leftEffort, leftCorrection, invertLeft);
     lastRightEffort = applyOutputScaling(rightEffort, rightCorrection, invertRight);
+    lastLeftPulseUs = effortToPulseUs(lastLeftEffort);
+    lastRightPulseUs = effortToPulseUs(lastRightEffort);
 
     if (!attached) {
         return;
     }
 
-    leftEsc.writeMicroseconds(effortToPulseUs(lastLeftEffort));
-    rightEsc.writeMicroseconds(effortToPulseUs(lastRightEffort));
+    leftEsc.writeMicroseconds(lastLeftPulseUs);
+    rightEsc.writeMicroseconds(lastRightPulseUs);
 }

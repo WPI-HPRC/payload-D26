@@ -113,6 +113,16 @@ class ScrewDriveInterface {
      */
     float getLastRightEffort() const;
 
+    /**
+     * Return the last pulse width commanded to the left ESC.
+     */
+    uint16_t getLastLeftPulseUs() const;
+
+    /**
+     * Return the last pulse width commanded to the right ESC.
+     */
+    uint16_t getLastRightPulseUs() const;
+
   private:
     Servo leftEsc;
     Servo rightEsc;
@@ -124,6 +134,8 @@ class ScrewDriveInterface {
     bool invertRight = false;
     float lastLeftEffort = 0.0f;
     float lastRightEffort = 0.0f;
+    uint16_t lastLeftPulseUs = 1500;
+    uint16_t lastRightPulseUs = 1500;
     bool attached = false;
     bool armed = false;
     bool arming = false;

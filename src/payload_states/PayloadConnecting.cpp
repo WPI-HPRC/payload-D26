@@ -1,5 +1,6 @@
 #include "../State.h"
 #include "../multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
+#include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 
 void handleAntennaConnectionEstablished() {
     // Placeholder for actions to take once connection is established
@@ -25,12 +26,14 @@ void handleConnectionTimeout() {
 }
 
 extern AntennaConnectorInterface antennaConnector; // Create an instance of the antenna connector interface
+extern AntennaSerialTransmitter antennaSerialTransmitter;
 uint32_t timeoutDuration = 8000; // Set a timeout duration (e.g., 10 seconds)
 
 
 void payloadConnectingInit(StateData *data) {
     Serial.println("Entered Payload Connecting State...");
     Serial.println("Waiting for connection to be established...");
+    antennaSerialTransmitter.setOutputStream(&Serial);
 
 }
 
@@ -58,6 +61,8 @@ StateID payloadConnectingLoop(StateData *data, Context *ctx) {
     }
 
    
+    antennaSerialTransmitter.updateConnectionStatus();
+
     if(antennaConnector.onConnectionGained()) {
         handleAntennaConnectionEstablished();
         return PAYLOAD_ROV;

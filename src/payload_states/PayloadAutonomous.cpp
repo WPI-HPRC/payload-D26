@@ -1,5 +1,6 @@
 #include "../State.h"
 #include "../multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
+#include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 
 
 void handleAntennaConnectionConfirmed() {
@@ -15,10 +16,12 @@ void autonomousBehavior() {
 }
 
 extern AntennaConnectorInterface antennaConnector; // Create an instance of the antenna connector interface
+extern AntennaSerialTransmitter antennaSerialTransmitter;
 
 void payloadAutonomousInit(StateData *data) {
     Serial.println("Entered Payload Autonomous State...");
     Serial.println("Performing autonomous actions...");
+    antennaSerialTransmitter.setOutputStream(&Serial);
 }
 
 StateID payloadAutonomousLoop(StateData *data, Context *ctx) {
@@ -45,6 +48,8 @@ StateID payloadAutonomousLoop(StateData *data, Context *ctx) {
     }
 
    
+    antennaSerialTransmitter.updateConnectionStatus();
+
     if(antennaConnector.onConnectionGained()) {
         handleAntennaConnectionConfirmed();
         return PAYLOAD_ROV;

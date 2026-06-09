@@ -27,8 +27,10 @@
 #include <HardwareSerial.h>
 #include <SPI.h>
 #include "multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
+#include "multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 #include <Servo.h>
+#include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
@@ -38,8 +40,9 @@ SPIClass CAMERA_SPI(CAMERA_MOSI, CAMERA_MISO, CAMERA_SCK);
 HardwareSerial RADIO_SERIAL(RADIO_SERIAL_RX, RADIO_SERIAL_TX);
 HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 AntennaConnectorInterface antennaConnector;
+AntennaSerialTransmitter antennaSerialTransmitter(&Serial, &antennaConnector);
 ScrewDriveInterface screwDrive;
-
+OpenMVReceiver openMVReceiver(&CAMERA_SERIAL);
 
 /// Actuators
 Servo latchServo;

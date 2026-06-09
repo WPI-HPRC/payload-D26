@@ -61,14 +61,6 @@ void AntennaConnectorInterface::DriveData::get(float &speedOutput, float &turnOu
 }
 
 bool AntennaConnectorInterface::hasConnection() {
-
-    /// real entry point
-    /**
-     * Nic - this is where GNC can interface 
-     */
-
-
-    /// test hook: if simulated connection is enabled, return true until the duration has passed
     if (simulatedConnectionEnabled) {
         uint32_t now = millis();
 
@@ -79,7 +71,11 @@ bool AntennaConnectorInterface::hasConnection() {
         simulatedConnectionEnabled = false;
     }
 
-    return false;
+    return transmitterConnectionStatus;
+}
+
+void AntennaConnectorInterface::setTransmitterConnectionStatus(bool connected) {
+    transmitterConnectionStatus = connected;
 }
 
 bool AntennaConnectorInterface::onConnectionGained() {
@@ -129,6 +125,7 @@ void AntennaConnectorInterface::clearSimulatedConnection() {
 void AntennaConnectorInterface::reset() {
     rawConnection = false;
     confirmedConnection = false;
+    transmitterConnectionStatus = false;
     rawConnectionChangedAt = millis();
     clearSimulatedConnection();
 }
@@ -151,6 +148,59 @@ void AntennaConnectorInterface::setDriveData(float speed, float turn) {
 
 AntennaConnectorInterface::DriveData AntennaConnectorInterface::getDriveData() const {
     return driveData;
+}
+
+bool AntennaConnectorInterface::accessImageData(const String*& base64Data, int& byteCount) {
+    if (!pendingImageAvailable) {
+        base64Data = nullptr;
+        byteCount = 0;
+        return false;
+    }
+
+    pendingImageLocked = true;
+    base64Data = &pendingImageData;
+    byteCount = pendingImageByteCount;
+    return true;
+}
+
+bool AntennaConnectorInterface::accessImageData(String& base64Data, int& byteCount) {
+    const String* imageData = nullptr;
+
+    if (!accessImageData(imageData, byteCount) || imageData == nullptr) {
+        base64Data = "";
+        return false;
+    }
+
+    base64Data = *imageData;
+    return true;
+}
+
+void AntennaConnectorInterface::antennaReadyForImageData() {
+    pendingImageData = "";
+    pendingImageByteCount = 0;
+    pendingImageAvailable = false;
+    pendingImageLocked = false;
+}
+
+bool AntennaConnectorInterface::canAcceptImages() {
+    return !pendingImageAvailable && !pendingImageLocked;
+}
+
+bool AntennaConnectorInterface::canAcceptImageData() {
+    return canAcceptImages();
+}
+
+bool AntennaConnectorInterface::intakeImageData(const String& base64Data, int byteCount) {
+    if (!canAcceptImages()) {
+        return false;
+    }
+
+    pendingImageData = base64Data;
+    pendingImageByteCount = byteCount;
+    pendingImageAvailable = true;
+    pendingImageLocked = false;
+
+    return true;
 }
 
 void AntennaConnectorInterface::updateRawConnection(bool currentConnection, uint32_t now) {
