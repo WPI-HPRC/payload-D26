@@ -40,7 +40,7 @@ void payloadDeployedInit(StateData *data) {
     latchServo.detach();
 
     Serial.println("Attaching Antenna Servo");
-    antennaServo.attach(ADC_INN5);
+    antennaServo.attach(ANTENNA_SERVO_PWM);
 }
 
 StateID payloadDeployedLoop(StateData *data, Context *ctx) {
