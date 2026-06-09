@@ -98,7 +98,7 @@ class AntennaSerialTransmitter {
     size_t outgoingPacketIndex = 0;
 
     size_t imageChunkSize = 64;
-    uint32_t transmitIntervalMs = 50;
+    uint32_t transmitIntervalMs = 5;
 
     bool beginImageTransfer();
     bool sendNextImagePacket();
