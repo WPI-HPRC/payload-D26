@@ -7,7 +7,7 @@ void payloadSelfRightingInit(StateData *data) {
 
 StateID payloadSelfRightingLoop(StateData *data, Context *ctx) {
 
-    if(data->deltaTime > 1000) { // after 1 second, transition to the next state (deploying)
+    if(data->currentTime > 1000) { // after 1 second, transition to the next state (deploying)
 
         // Just for the purposes of simulating the self-righting process
         Serial.println("Exiting Payload Self-Righting State...");

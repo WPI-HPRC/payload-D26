@@ -1,11 +1,15 @@
 #include "../State.h"
 #include "../Context.h"
 
-#define ANTENNA_RAISE_DURATION_MS 6000
+
+#define ANTENNA_RAISE_DURATION_MS 3000
 #define ANTENNA_DOWN_MS 1000
 #define ANTENNA_UP_MS 2000
 
 extern Servo antennaServo;
+
+// get a reference in order to detach the pin now that the rover is disconnected
+extern Servo latchServo;
 
 void raiseAntenna() {
     antennaServo.writeMicroseconds(ANTENNA_UP_MS);
@@ -31,7 +35,12 @@ void handleAntennaRaised() {
 void payloadDeployedInit(StateData *data) {
 
     Serial.println("Entered Payload Deployed State...");
-    antennaServo.attach(ANTENNA_SERVO_PWM);
+
+    Serial.println("Disconnecting Latch Servo");
+    latchServo.detach();
+
+    Serial.println("Attaching Antenna Servo");
+    antennaServo.attach(ADC_INN5);
 }
 
 StateID payloadDeployedLoop(StateData *data, Context *ctx) {

@@ -1,9 +1,9 @@
 #include "../State.h"
 #include "../Context.h"
 
-#define LATCH_RELEASE_DURATION_MS 6000 // Duration to simulate latch release in milliseconds
-#define LATCH_DOWN_MS 1000 // Milliseconds to write to the servo for latch down position
-#define LATCH_UP_MS 2000 // Milliseconds to write to the servo for latch up position
+#define LATCH_RELEASE_DURATION_MS 4000 // Duration to simulate latch release in milliseconds
+#define LATCH_DOWN_MICROSECONDS 1000 // Microseconds to write to the servo for latch down position
+#define LATCH_UP_MICROSECONDS 2000 // Microseconds to write to the servo for latch up position
 
 
 extern Servo latchServo; // Create an instance of the latch servo
@@ -11,9 +11,9 @@ extern Servo latchServo; // Create an instance of the latch servo
 
 
 bool checkLatchReleaseComplete(StateData *data) {
-    
+
     /// TODO: need to discuss how completion will be determined. For now timing will be used but more may be required
-    if(data->deltaTime > LATCH_RELEASE_DURATION_MS) {
+    if(data->currentTime > LATCH_RELEASE_DURATION_MS) {
         return true;
     }
 
@@ -50,7 +50,11 @@ void payloadLatchReleasingInit(StateData *data) {
 StateID payloadLatchReleasingLoop(StateData *data, Context *ctx) {
 
     /// continously write to the servo to ensure it stays in the correct position during the latch release process. This is to prevent any issues with the servo losing power or signal during this critical time.
-    latchServo.writeMicroseconds(LATCH_UP_MS); // Write the servo to the latch up position
+    latchServo.writeMicroseconds(LATCH_UP_MICROSECONDS); // Write the up position to the servo to release the latch
+
+
+
+    
 
 
     if (checkLatchReleaseComplete(data)) {

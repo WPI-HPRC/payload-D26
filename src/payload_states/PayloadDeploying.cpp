@@ -1,16 +1,16 @@
 #include "../State.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 
-static constexpr float DEPLOY_SPEED = 0.20f;
+static constexpr float DEPLOY_SPEED = 0.35f;
 static constexpr float DEPLOY_TURN_CORRECTION = 0.0f;
-static constexpr uint32_t DEPLOYMENT_DURATION_MS = 10000; // Duration to simulate deployment in milliseconds
+static constexpr uint32_t DEPLOYMENT_DURATION_MS = 3000; // Duration to simulate deployment in milliseconds
 
 extern ScrewDriveInterface screwDrive;
 
 bool checkDeploymentComplete(String input, StateData *data) {
     
     // timer check
-    if(data->deltaTime > DEPLOYMENT_DURATION_MS) {
+    if(data->currentTime > DEPLOYMENT_DURATION_MS) {
         return true;
     }
 
@@ -34,7 +34,7 @@ bool checkDeploymentFailure(String input, StateData *data) {
     
 
     // if get large current draw
-    
+
 
     // test hook: check for a serial command to simulate deployment failure
     if(input == "deployment_failed") {
