@@ -14,6 +14,8 @@ static constexpr bool ENABLE_ROV_IMAGE_TRANSMISSION = true;
 static constexpr uint32_t DRIVE_DEBUG_INTERVAL_MS = 250;
 static constexpr bool ENABLE_ROV_DEBUG = false;
 
+
+/// debug that only prints if ENABLE_ROV_DEBUG is true
 void printDriveDebugJson(bool armed, const AntennaConnectorInterface::DriveData& driveData) {
     if (!ENABLE_ROV_DEBUG) {
         return;
@@ -36,12 +38,8 @@ void printDriveDebugJson(bool armed, const AntennaConnectorInterface::DriveData&
     Serial.println("}");
 }
 
-void handleConnectionLost() {
-    if (ENABLE_ROV_DEBUG) {
-        Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"connectionLost\"}");
-    }
-}
 
+/// handles serial input via USB for testing, and local connection to the rover (do not use for antenna-bound communication)
 void handleRovSerialInput() {
     if(!Serial.available()) {
         return;
@@ -146,6 +144,16 @@ void handleRovSerialInput() {
     }
 }
 
+
+void handleConnectionLost() {
+    if (ENABLE_ROV_DEBUG) {
+        Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"connectionLost\"}");
+    }
+}
+
+/**
+ * grabs drive commands from the antenna connector and sends them to the screw drive and handles logging if enabled.
+ */
 void driveBehavior() {
     AntennaConnectorInterface::DriveData driveData = antennaConnector.getDriveData();
     bool armed = screwDrive.updateArm();
@@ -181,34 +189,46 @@ void payloadROVInit(StateData *data) {
         Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
     }
 
+    // attach the screw drive and start the arming process immediately so it's ready to go by the time we get drive commands
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
     screwDrive.beginArm();
 
+    // set up the antenna serial transmitter and OpenMV receiver input stream
     CAMERA_SERIAL.begin(115200);
     openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
+    // for local connection (no antenna) setup the serial antenna/debug transmitter
     antennaSerialTransmitter.setOutputStream(&Serial);
     antennaSerialTransmitter.setAntennaConnector(&antennaConnector);
+
+    // antenna setup can go here
 }
 
 StateID payloadROVLoop(StateData *data, Context *ctx) {
+
+    // local serial input handling for testing and local control (can run in parallel with antenna commands, but intended for use when not connected to the antenna)
     handleRovSerialInput();
 
     if (ENABLE_ROV_IMAGE_TRANSMISSION) {
         String imageData = "";
         int byteCount = 0;
 
+
+        // handle image receive from openMV over serial and publish to antenna connector if we're ready to accept images (not currently in the middle of a transmission)
         if (openMVReceiver.runReceiver() && antennaConnector.canAcceptImages()) {
             if (openMVReceiver.getImage(imageData, byteCount)) {
                 antennaConnector.intakeImageData(imageData, byteCount);
             }
         }
 
+        // run the local connection serial transmiter (handles sending debug and telemetry to the PC and receiving commands from the PC, does not handle antenna communication)
         antennaSerialTransmitter.runTransmitter();
     }
 
+    // handle drive commands and logging
     driveBehavior();
 
+    // check for connection loss and transition to autonomous state if connection is lost
     if (antennaConnector.onConnectionLost()) {
         handleConnectionLost();
         return PAYLOAD_AUTONOMOUS;
