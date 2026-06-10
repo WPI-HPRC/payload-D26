@@ -6,10 +6,10 @@ from machine import UART
 
 
 UART_BUS = 1
-BAUDRATE = 57600
+BAUDRATE = 10600
 CHUNK_SIZE = 48
-INTER_LINE_DELAY_MS = 5
-FRAME_INTERVAL_MS = 5000
+INTER_LINE_DELAY_MS = 0
+FRAME_INTERVAL_MS = 0
 
 FRAME_SIZE = csi.QQQVGA
 JPEG_QUALITY = 50
@@ -26,7 +26,7 @@ def setup_camera():
     if hasattr(cam, "quality"):
         cam.quality(JPEG_QUALITY)
 
-    cam.snapshot(time=5000)
+    cam.snapshot(time=1000)
     return cam
 
 
@@ -55,10 +55,10 @@ def write_base64_lines(uart, image_bytes):
 
     uart.write("IMG_END\n")
     time.sleep_ms(INTER_LINE_DELAY_MS)
-    uart.write(
-        "DBG_OPENMV_END jpeg_bytes=%d base64_chars=%d chunks=%d chunk_size=%d baud=%d\n"
-        % (len(image_bytes), len(encoded), chunks, CHUNK_SIZE, BAUDRATE)
-    )
+    # uart.write(
+    #     "DBG_OPENMV_END jpeg_bytes=%d base64_chars=%d chunks=%d chunk_size=%d baud=%d\n"
+    #     % (len(image_bytes), len(encoded), chunks, CHUNK_SIZE, BAUDRATE)
+    # )
 
 
 camera = setup_camera()

@@ -12,11 +12,11 @@ extern OpenMVReceiver openMVReceiver;
 extern HardwareSerial CAMERA_SERIAL; // not available on real wiring layout
 extern SoftwareSerial SOFT_CAM_SERIAL;
 
-static constexpr bool ENABLE_OPENMV_RAW_MONITOR = true;
-static constexpr bool ENABLE_OPENMV_RAW_MONITOR_STATUS = true;
-static constexpr bool ENABLE_OPENMV_RX_PIN_MONITOR = true;
-static constexpr bool ENABLE_OPENMV_IMAGE_RECEIVER = false;
-static constexpr bool ENABLE_ROV_TELEMETRY_TRANSMISSION = false;
+static constexpr bool ENABLE_OPENMV_RAW_MONITOR = false;
+static constexpr bool ENABLE_OPENMV_RAW_MONITOR_STATUS = false;
+static constexpr bool ENABLE_OPENMV_RX_PIN_MONITOR = false;
+static constexpr bool ENABLE_OPENMV_IMAGE_RECEIVER = true;
+static constexpr bool ENABLE_ROV_TELEMETRY_TRANSMISSION = true;
 static constexpr uint32_t OPENMV_RAW_STATUS_INTERVAL_MS = 1000;
 static constexpr uint32_t DRIVE_DEBUG_INTERVAL_MS = 250;
 static constexpr bool ENABLE_ROV_DEBUG = false;
@@ -267,7 +267,7 @@ void payloadROVInit(StateData *data) {
     // set up the antenna serial transmitter and OpenMV receiver input stream
     //CAMERA_SERIAL.begin(115200);
     pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
-    SOFT_CAM_SERIAL.begin(57600);
+    SOFT_CAM_SERIAL.begin(10600);
     SOFT_CAM_SERIAL.listen();
     openMVReceiver.setInputStream(&SOFT_CAM_SERIAL);
 

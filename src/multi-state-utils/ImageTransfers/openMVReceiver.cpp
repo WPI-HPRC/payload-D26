@@ -166,16 +166,16 @@ void OpenMVReceiver::handleTransmissionEnd(String& receivedData) {
 
     int expectedChars = expectedBase64Chars(incomingExpectedByteCount);
 
-    Serial.print("DBG_MARS_CAMERA_END expected_jpeg_bytes=");
-    Serial.print(incomingExpectedByteCount);
-    Serial.print(" base64_chars=");
-    Serial.print(incomingBase64CharCount);
-    Serial.print(" expected_base64_chars=");
-    Serial.print(expectedChars);
-    Serial.print(" base64_delta=");
-    Serial.print(incomingBase64CharCount - expectedChars);
-    Serial.print(" chunks=");
-    Serial.println(incomingChunkCount);
+    // Serial.print("DBG_MARS_CAMERA_END expected_jpeg_bytes=");
+    // Serial.print(incomingExpectedByteCount);
+    // Serial.print(" base64_chars=");
+    // Serial.print(incomingBase64CharCount);
+    // Serial.print(" expected_base64_chars=");
+    // Serial.print(expectedChars);
+    // Serial.print(" base64_delta=");
+    // Serial.print(incomingBase64CharCount - expectedChars);
+    // Serial.print(" chunks=");
+    // Serial.println(incomingChunkCount);
 
     if(incomingExpectedByteCount > 0) {
         imageSizes[currentQueueSize] = incomingExpectedByteCount;
