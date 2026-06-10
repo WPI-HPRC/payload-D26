@@ -6,12 +6,12 @@ from machine import UART
 
 
 UART_BUS = 1
-BAUDRATE = 115200
+BAUDRATE = 57600
 CHUNK_SIZE = 48
 INTER_LINE_DELAY_MS = 5
-FRAME_INTERVAL_MS = 500
+FRAME_INTERVAL_MS = 5000
 
-FRAME_SIZE = csi.QQVGA
+FRAME_SIZE = csi.QQQVGA
 JPEG_QUALITY = 50
 
 
@@ -26,7 +26,7 @@ def setup_camera():
     if hasattr(cam, "quality"):
         cam.quality(JPEG_QUALITY)
 
-    cam.snapshot(time=500)
+    cam.snapshot(time=5000)
     return cam
 
 

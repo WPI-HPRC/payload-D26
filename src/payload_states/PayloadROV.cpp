@@ -3,14 +3,21 @@
 #include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 #include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
+#include <SoftwareSerial.h>
 
 extern AntennaConnectorInterface antennaConnector;
 extern AntennaSerialTransmitter antennaSerialTransmitter;
 extern ScrewDriveInterface screwDrive;
 extern OpenMVReceiver openMVReceiver;
-extern HardwareSerial CAMERA_SERIAL;
+extern HardwareSerial CAMERA_SERIAL; // not available on real wiring layout
+extern SoftwareSerial SOFT_CAM_SERIAL;
 
-static constexpr bool ENABLE_ROV_IMAGE_TRANSMISSION = true;
+static constexpr bool ENABLE_OPENMV_RAW_MONITOR = true;
+static constexpr bool ENABLE_OPENMV_RAW_MONITOR_STATUS = true;
+static constexpr bool ENABLE_OPENMV_RX_PIN_MONITOR = true;
+static constexpr bool ENABLE_OPENMV_IMAGE_RECEIVER = false;
+static constexpr bool ENABLE_ROV_TELEMETRY_TRANSMISSION = false;
+static constexpr uint32_t OPENMV_RAW_STATUS_INTERVAL_MS = 1000;
 static constexpr uint32_t DRIVE_DEBUG_INTERVAL_MS = 250;
 static constexpr bool ENABLE_ROV_DEBUG = false;
 
@@ -152,6 +159,69 @@ void handleConnectionLost() {
 }
 
 /**
+ * Mirrors every byte received from the OpenMV camera stream to USB Serial.
+ *
+ * This is a diagnostic path for camera serial bring-up. It intentionally does
+ * not parse image framing or emit rover JSON so the PC sees the raw OpenMV
+ * output with minimal firmware-added noise.
+ */
+void handleOpenMVRawMonitor() {
+    static uint32_t lastStatusAt = 0;
+    static uint32_t totalBytesSeen = 0;
+    static uint32_t totalBytesAtLastStatus = 0;
+    static bool rxMonitorInitialized = false;
+    static int lastRxLevel = HIGH;
+    static uint32_t rxTransitionsSeen = 0;
+    static uint32_t rxTransitionsAtLastStatus = 0;
+    uint32_t bytesThisLoop = 0;
+
+    if (ENABLE_OPENMV_RX_PIN_MONITOR) {
+        int rxLevel = digitalRead(CAMERA_SERIAL_RX);
+
+        if (!rxMonitorInitialized) {
+            lastRxLevel = rxLevel;
+            rxMonitorInitialized = true;
+        } else if (rxLevel != lastRxLevel) {
+            rxTransitionsSeen++;
+            lastRxLevel = rxLevel;
+        }
+    }
+
+    while (SOFT_CAM_SERIAL.available() > 0) {
+        Serial.write(static_cast<uint8_t>(SOFT_CAM_SERIAL.read()));
+        totalBytesSeen++;
+        bytesThisLoop++;
+    }
+
+    if (!ENABLE_OPENMV_RAW_MONITOR_STATUS) {
+        return;
+    }
+
+    uint32_t now = millis();
+    if (now - lastStatusAt < OPENMV_RAW_STATUS_INTERVAL_MS) {
+        return;
+    }
+
+    if (totalBytesSeen == totalBytesAtLastStatus) {
+        Serial.print("DBG_OPENMV_RAW_NO_BYTES rx_level=");
+        Serial.print(digitalRead(CAMERA_SERIAL_RX));
+        Serial.print(" rx_transitions_last_interval=");
+        Serial.println(rxTransitionsSeen - rxTransitionsAtLastStatus);
+    } else {
+        Serial.print("DBG_OPENMV_RAW_BYTES total=");
+        Serial.print(totalBytesSeen);
+        Serial.print(" last_interval=");
+        Serial.print(totalBytesSeen - totalBytesAtLastStatus);
+        Serial.print(" rx_transitions_last_interval=");
+        Serial.println(rxTransitionsSeen - rxTransitionsAtLastStatus);
+    }
+
+    (void)bytesThisLoop;
+    totalBytesAtLastStatus = totalBytesSeen;
+    rxTransitionsAtLastStatus = rxTransitionsSeen;
+    lastStatusAt = now;
+}
+/**
  * grabs drive commands from the antenna connector and sends them to the screw drive and handles logging if enabled.
  */
 void driveBehavior() {
@@ -185,6 +255,7 @@ void driveBehavior() {
 }
 
 void payloadROVInit(StateData *data) {
+    
     if (ENABLE_ROV_DEBUG) {
         Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
     }
@@ -194,8 +265,20 @@ void payloadROVInit(StateData *data) {
     screwDrive.beginArm();
 
     // set up the antenna serial transmitter and OpenMV receiver input stream
-    CAMERA_SERIAL.begin(115200);
-    openMVReceiver.setInputStream(&CAMERA_SERIAL);
+    //CAMERA_SERIAL.begin(115200);
+    pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
+    SOFT_CAM_SERIAL.begin(57600);
+    SOFT_CAM_SERIAL.listen();
+    openMVReceiver.setInputStream(&SOFT_CAM_SERIAL);
+
+    if (ENABLE_OPENMV_RAW_MONITOR && ENABLE_OPENMV_RAW_MONITOR_STATUS) {
+        Serial.print("DBG_OPENMV_RAW_MONITOR_READY baud=57600 rx_pin=");
+        Serial.print(CAMERA_SERIAL_RX);
+        Serial.print(" tx_pin=");
+        Serial.print(CAMERA_SERIAL_TX);
+        Serial.print(" initial_rx_level=");
+        Serial.println(digitalRead(CAMERA_SERIAL_RX));
+    }
 
     // for local connection (no antenna) setup the serial antenna/debug transmitter
     antennaSerialTransmitter.setOutputStream(&Serial);
@@ -209,7 +292,9 @@ StateID payloadROVLoop(StateData *data, Context *ctx) {
     // local serial input handling for testing and local control (can run in parallel with antenna commands, but intended for use when not connected to the antenna)
     handleRovSerialInput();
 
-    if (ENABLE_ROV_IMAGE_TRANSMISSION) {
+    if (ENABLE_OPENMV_RAW_MONITOR) {
+        handleOpenMVRawMonitor();
+    } else if (ENABLE_OPENMV_IMAGE_RECEIVER) {
         String imageData = "";
         int byteCount = 0;
 
@@ -221,6 +306,9 @@ StateID payloadROVLoop(StateData *data, Context *ctx) {
             }
         }
 
+    }
+
+    if (ENABLE_ROV_TELEMETRY_TRANSMISSION) {
         // run the local connection serial transmiter (handles sending debug and telemetry to the PC and receiving commands from the PC, does not handle antenna communication)
         antennaSerialTransmitter.runTransmitter();
     }
