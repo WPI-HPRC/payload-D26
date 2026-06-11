@@ -26,7 +26,7 @@
 
     #define ANTENNA_SERVO_PWM ADC_INN5
 
-    #define SELF_RIGHTING_PWM1 PWM_OUT2
+    #define SELF_RIGHTING_PWM1 PWM_OUT7
     #define SELF_RIGHTING_PWM2 PWM_OUT3
 #endif
 

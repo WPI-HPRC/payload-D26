@@ -33,6 +33,10 @@
 #include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
 #include <SoftwareSerial.h>
 
+
+#define OUTPUT_SENSOR_DATA false
+
+
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
 HardwareSerial GPS_SERIAL(GPS_SERIAL_RX, GPS_SERIAL_TX);
@@ -53,6 +57,9 @@ OpenMVReceiver openMVReceiver(&SOFT_CAM_SERIAL);
 /// Actuators
 Servo latchServo;
 Servo antennaServo;
+
+Servo selfRightingServo1;
+Servo selfRightingServo2;
 
 
 
@@ -120,7 +127,7 @@ void sensorLoop() {
     */
 
     // manager is not being used here to get data
-    if (millis() - last_print > 200)
+    if (OUTPUT_SENSOR_DATA && millis() - last_print > 250)
     {
         digitalWrite(LED_BLUE, !digitalRead(LED_BLUE));
         last_print = millis();
@@ -239,7 +246,7 @@ void sensorLoop() {
 }
 
 void setup() {
-    currentState = PAYLOAD_IDLE;
+    currentState = PAYLOAD_SELF_RIGHTING;
     data = {};
 
     initStateMap();
@@ -356,7 +363,7 @@ void loop() {
         ctx.errorLogFile.printf("%d %d\n", newState, millis());
     }
 
-    //sensorLoop();
+    sensorLoop();
 
     if(false && ctx.ekfLooping) {
         ekfLoop(&ctx);
