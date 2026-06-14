@@ -15,7 +15,7 @@ void raiseAntenna() {
     antennaServo.writeMicroseconds(ANTENNA_UP_MS);
 }
 
-bool checkAntennaRaised(StateData *data, String input) {
+bool checkAntennaRaised(StateData const *data, String input) {
     if(data->currentTime > ANTENNA_RAISE_DURATION_MS) {
         return true;
     }
@@ -32,7 +32,7 @@ void handleAntennaRaised() {
     Serial.println("Exiting Payload Deployed State...");
 }
 
-void payloadDeployedInit(StateData *data) {
+void *payloadDeployedInit(StateData const *data) {
 
     Serial.println("Entered Payload Deployed State...");
 
@@ -41,9 +41,11 @@ void payloadDeployedInit(StateData *data) {
 
     Serial.println("Attaching Antenna Servo");
     antennaServo.attach(ANTENNA_SERVO_PWM);
+
+    return nullptr;
 }
 
-StateID payloadDeployedLoop(StateData *data, Context *ctx) {
+StateID payloadDeployedLoop(StateData const *data, Context *ctx, void *_localData) {
 
     String input = "";
 

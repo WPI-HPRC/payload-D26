@@ -1,3 +1,4 @@
+#include "debouncer.h"
 #define TEMPLATE_STATES_OVERRIDE
 #include "../State.h"
 #include "Arduino.h"
@@ -5,16 +6,19 @@
 #include "config.h"
 #include "logging.h"
 
-void prelaunchInit(StateData *data) {}
+struct PrelaunchData {
+  Debouncer accelDebouncer;
+};
 
-StateID prelaunchLoop(StateData *data, Context *ctx) {
-  // Serial.println("looping prelaunch");
+void *prelaunchInit(StateData const *data) {
+  PrelaunchData *localData = static_cast<PrelaunchData *>(malloc(sizeof(PrelaunchData)));
+  localData->accelDebouncer = Debouncer(20);
 
-  static bool BlueLedState = false;
-  static bool GreenLedState = false;
-  static uint32_t lastBlueToggleTime = 0;
-  static uint32_t lastGreenToggleTime = 0;
+  return localData;
+}
 
+StateID prelaunchLoop(StateData const *data, Context *ctx, void *_localData) {
+  PrelaunchData *localData = static_cast<PrelaunchData *>(_localData);
   //static bool ComuteInitialOrientationThisLoop = false;
 
   const auto &accel_desc = ctx->asm330.get_descriptor();
@@ -61,32 +65,8 @@ StateID prelaunchLoop(StateData *data, Context *ctx) {
 
   const auto acc_vec = ctx->estimator.get_accel_prev();
   // check acceleration in vertical direction is greater than threshold
-  if (data->accelDebouncer.update(abs(acc_vec(0, 0)) > LAUNCH_TRHESHOLD, millis())) {
+  if (localData->accelDebouncer.update(abs(acc_vec(0, 0)) > LAUNCH_TRHESHOLD, data->currentTime)) {
     return BOOST;
-  }
-
-  if (ctx->sdInitialized && ctx->logFile != NULL) {
-    // blink
-    if ((millis() - lastBlueToggleTime) > 250) {
-      lastBlueToggleTime = millis();
-      BlueLedState = !BlueLedState;
-      digitalWrite(LED_BLUE, BlueLedState);
-    }
-  }
-
-  // if (gps_desc.data.gpsLockType == 3) {
-    // if ((millis() - lastGreenToggleTime) > 250) {
-    //   lastGreenToggleTime = millis();
-    //   GreenLedState = !GreenLedState;
-    //   digitalWrite(LED_GREEN, GreenLedState);
-    // }
-  // }
-
-  bool testingPayload = true;
-
-  if(testingPayload) {
-    Serial.println("TRANSITIONING TO PAYLOAD TESTING");
-    return PAYLOAD_TESTING;
   }
 
   return PRELAUNCH;

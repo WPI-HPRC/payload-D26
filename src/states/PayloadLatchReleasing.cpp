@@ -10,7 +10,7 @@ extern Servo latchServo; // Create an instance of the latch servo
 
 
 
-bool checkLatchReleaseComplete(StateData *data) {
+bool checkLatchReleaseComplete(StateData const *data) {
 
     /// TODO: need to discuss how completion will be determined. For now timing will be used but more may be required
     if(data->currentTime > LATCH_RELEASE_DURATION_MS) {
@@ -37,7 +37,7 @@ void handleLatchReleaseComplete() {
     Serial.println("Exiting Payload Latch Releasing State...");
 }
 
-void payloadLatchReleasingInit(StateData *data) {
+void *payloadLatchReleasingInit(StateData const *data) {
 
     Serial.println("Entered Payload Latch Releasing State...");
 
@@ -45,9 +45,10 @@ void payloadLatchReleasingInit(StateData *data) {
     // intialize latch servo
     latchServo.attach(LATCH_SERVO_PWM);
 
+    return nullptr;
 }
 
-StateID payloadLatchReleasingLoop(StateData *data, Context *ctx) {
+StateID payloadLatchReleasingLoop(StateData const *data, Context *ctx, void *_localData) {
 
     /// continously write to the servo to ensure it stays in the correct position during the latch release process. This is to prevent any issues with the servo losing power or signal during this critical time.
     latchServo.writeMicroseconds(LATCH_UP_MICROSECONDS); // Write the up position to the servo to release the latch

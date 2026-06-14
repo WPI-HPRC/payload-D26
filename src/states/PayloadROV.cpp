@@ -254,7 +254,7 @@ void driveBehavior() {
     }
 }
 
-void payloadROVInit(StateData *data) {
+void *payloadROVInit(StateData const *data) {
     
     if (ENABLE_ROV_DEBUG) {
         Serial.println("{\"type\":\"debug\",\"source\":\"rovState\",\"event\":\"entered\"}");
@@ -285,9 +285,11 @@ void payloadROVInit(StateData *data) {
     antennaSerialTransmitter.setAntennaConnector(&antennaConnector);
 
     // antenna setup can go here
+
+    return nullptr;
 }
 
-StateID payloadROVLoop(StateData *data, Context *ctx) {
+StateID payloadROVLoop(StateData const *data, Context *ctx, void *_localData) {
 
     // local serial input handling for testing and local control (can run in parallel with antenna commands, but intended for use when not connected to the antenna)
     handleRovSerialInput();

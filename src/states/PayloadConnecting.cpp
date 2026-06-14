@@ -9,7 +9,7 @@ void handleAntennaConnectionEstablished() {
     Serial.println("Exiting Payload Connecting State...");
 }
 
-bool checkConnectionTimeout(StateData *data, uint32_t timeoutDuration) {
+bool checkConnectionTimeout(StateData const *data, uint32_t timeoutDuration) {
 
     // check if no connection has been established within the timeout duration
     if(data->currentTime > timeoutDuration) {
@@ -30,14 +30,15 @@ extern AntennaSerialTransmitter antennaSerialTransmitter;
 uint32_t timeoutDuration = 8000; // Set a timeout duration (e.g., 10 seconds)
 
 
-void payloadConnectingInit(StateData *data) {
+void *payloadConnectingInit(StateData const *data) {
     Serial.println("Entered Payload Connecting State...");
     Serial.println("Waiting for connection to be established...");
     antennaSerialTransmitter.setOutputStream(&Serial);
 
+    return nullptr;
 }
 
-StateID payloadConnectingLoop(StateData *data, Context *ctx) {
+StateID payloadConnectingLoop(StateData const *data, Context *ctx, void *_localData) {
 
     String input = "";
     if(Serial.available()) {

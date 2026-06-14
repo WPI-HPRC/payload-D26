@@ -18,13 +18,15 @@ void autonomousBehavior() {
 extern AntennaConnectorInterface antennaConnector; // Create an instance of the antenna connector interface
 extern AntennaSerialTransmitter antennaSerialTransmitter;
 
-void payloadAutonomousInit(StateData *data) {
+void *payloadAutonomousInit(StateData const *data) {
     Serial.println("Entered Payload Autonomous State...");
     Serial.println("Performing autonomous actions...");
     antennaSerialTransmitter.setOutputStream(&Serial);
+
+    return nullptr;
 }
 
-StateID payloadAutonomousLoop(StateData *data, Context *ctx) {
+StateID payloadAutonomousLoop(StateData const *data, Context *ctx, void *_localData) {
 
     String input = "";
     if(Serial.available()) {

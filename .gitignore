@@ -7,3 +7,4 @@ tools
 lib/telemetry-generated
 images/test-transfers/received
 images/received/
+decoded/

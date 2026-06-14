@@ -1,10 +1,11 @@
 #include "../State.h"
 
-void payloadIdleInit(StateData *data) {
+void *payloadIdleInit(StateData const *data) {
     Serial.println("Entered Payload Idle State...");
+    return nullptr;
 }
 
-StateID payloadIdleLoop(StateData *data, Context *ctx) {
+StateID payloadIdleLoop(StateData const *data, Context *ctx, void *_localData) {
 
     // for now
     Serial.println("In Payload Idle State... Transitioning to self-righting");

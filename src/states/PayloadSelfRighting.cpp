@@ -24,7 +24,7 @@ extern Servo selfRightingServo2; // connected to both side panels
 // store the payload's orientation
 Orientation currentOrientation;
 
-Orientation determineOrientation(StateData *data, Context *ctx, Orientation currentOrientation, unsigned long long &changeTime) {
+Orientation determineOrientation(StateData const *data, Context *ctx, Orientation currentOrientation, unsigned long long &changeTime) {
 
     static Orientation newOrientation = UNKNOWN;
 
@@ -102,7 +102,7 @@ Orientation determineOrientation(StateData *data, Context *ctx, Orientation curr
     return newOrientation;
 }
 
-bool handleUpright(StateData *data, unsigned long long lastOrientationChangeTime) {
+bool handleUpright(StateData const *data, unsigned long long lastOrientationChangeTime) {
 
     // if the payload is upright, we can proceed with the next steps of the mission after delay for confirmation
     if(data->currentTime - lastOrientationChangeTime > ORIENTATION_CONFIRMATION_INTERVAL) {
@@ -112,7 +112,7 @@ bool handleUpright(StateData *data, unsigned long long lastOrientationChangeTime
     return false;
 }
 
-void handleUpsideDown(StateData *data, unsigned long long &lastOrientationChangeTime) {
+void handleUpsideDown(StateData const *data, unsigned long long &lastOrientationChangeTime) {
     // if the payload is upside down, we may want to activate some self-righting mechanism (e.g. spinning up a reaction wheel, deploying a small parachute on one side, etc.)
     Serial.println("Payload is upside down.");
     selfRightingServo2.writeMicroseconds(SERVO_2_CLOSED_POSITION); // ensure side panels are closed so they can be used to flip the payload next
@@ -125,7 +125,7 @@ void handleUpsideDown(StateData *data, unsigned long long &lastOrientationChange
 }
 
 
-void handleOnSide(StateData *data, unsigned long long &lastOrientationChangeTime) {
+void handleOnSide(StateData const *data, unsigned long long &lastOrientationChangeTime) {
     // if the payload is on its side, we may want to activate some self-righting mechanism
     Serial.println("Payload is on its side.");
 
@@ -139,7 +139,7 @@ void handleOnSide(StateData *data, unsigned long long &lastOrientationChangeTime
     }
 }
 
-bool handleUnknown(StateData *data, unsigned long long &lastOrientationChangeTime) {
+bool handleUnknown(StateData const *data, unsigned long long &lastOrientationChangeTime) {
 
     unsigned long long timeInUnknown = data->currentTime - lastOrientationChangeTime;
 
@@ -169,7 +169,7 @@ bool handleUnknown(StateData *data, unsigned long long &lastOrientationChangeTim
 }
 
 
-void payloadSelfRightingInit(StateData *data) {
+void *payloadSelfRightingInit(StateData const *data) {
 
     Serial.println("Entered Payload Self-Righting State...");
 
@@ -178,9 +178,11 @@ void payloadSelfRightingInit(StateData *data) {
     selfRightingServo2.attach(SELF_RIGHTING_PWM2); // attach servo 2 to pin defined by SELF_RIGHTING_PWM2
     selfRightingServo1.writeMicroseconds(SERVO_1_CLOSED_POSITION);
     selfRightingServo2.writeMicroseconds(SERVO_2_CLOSED_POSITION);
+
+    return nullptr;
 }
 
-StateID payloadSelfRightingLoop(StateData *data, Context *ctx) {
+StateID payloadSelfRightingLoop(StateData const *data, Context *ctx, void *_localData) {
 
     static unsigned long long lastOrientationChangeTime = 0;
 

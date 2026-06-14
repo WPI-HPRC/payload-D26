@@ -7,7 +7,7 @@ static constexpr uint32_t DEPLOYMENT_DURATION_MS = 3000; // Duration to simulate
 
 extern ScrewDriveInterface screwDrive;
 
-bool checkDeploymentComplete(String input, StateData *data) {
+bool checkDeploymentComplete(String input, StateData const *data) {
     
     // timer check
     if(data->currentTime > DEPLOYMENT_DURATION_MS) {
@@ -30,7 +30,7 @@ void handleDeploymentComplete() {
     Serial.println("Exiting Payload Deploying State...");
 }
 
-bool checkDeploymentFailure(String input, StateData *data) {
+bool checkDeploymentFailure(String input, StateData const *data) {
     
 
     // if get large current draw
@@ -53,17 +53,19 @@ void handleDeploymentFailure() {
 }
 
 
-void handleDriveOut(StateData *data) {
+void handleDriveOut(StateData const *data) {
     screwDrive.drive(DEPLOY_SPEED, DEPLOY_TURN_CORRECTION);
 }
 
-void payloadDeployingInit(StateData *data) {
+void *payloadDeployingInit(StateData const *data) {
     Serial.println("Entered Payload Deploying State...");
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
     screwDrive.beginArm();
+
+    return nullptr;
 }
 
-StateID payloadDeployingLoop(StateData *data, Context *ctx) {
+StateID payloadDeployingLoop(StateData const *data, Context *ctx, void *_localData) {
 
     // check if ESCs are armed and if so drive out slowly
     if (screwDrive.updateArm()) {
