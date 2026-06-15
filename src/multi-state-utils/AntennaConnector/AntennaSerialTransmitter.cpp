@@ -44,6 +44,10 @@ bool AntennaSerialTransmitter::runTransmitter() {
             return sendNextImagePacket();
         }
 
+        if (antennaConnector->hasVisionData()) {
+            return sendVisionPacket();
+        }
+
         return sendTelemetryOnlyPacket();
     }
 
@@ -154,6 +158,17 @@ bool AntennaSerialTransmitter::sendNextImagePacket() {
     }
 
     return false;
+}
+
+bool AntennaSerialTransmitter::sendVisionPacket() {
+    RoverVisionFrame visionData;
+
+    if (!antennaConnector->accessVisionData(visionData)) {
+        return false;
+    }
+
+    String packet = buildVisionPacket(visionData);
+    return writePacket(packet);
 }
 
 bool AntennaSerialTransmitter::sendTelemetryOnlyPacket() {
@@ -311,5 +326,58 @@ void AntennaSerialTransmitter::appendSensorJson(String& json) const {
     json += String(antennaConnector->sensorData.rightScrewCurrent, 3);
     json += ",\"batteryVoltage\":";
     json += String(antennaConnector->sensorData.batteryVoltage, 3);
+    json += "}";
+}
+
+String AntennaSerialTransmitter::buildVisionPacket(const RoverVisionFrame& visionData) const {
+    String json = "{";
+    json += "\"type\":\"roverVision\"";
+    json += ",\"frameWidth\":";
+    json += visionData.frameWidth;
+    json += ",\"frameHeight\":";
+    json += visionData.frameHeight;
+    json += ",\"timestamp\":";
+    json += visionData.timestamp;
+    json += ",\"horizon\":{";
+    json += "\"x1\":";
+    json += visionData.horizon.x1;
+    json += ",\"y1\":";
+    json += visionData.horizon.y1;
+    json += ",\"x2\":";
+    json += visionData.horizon.x2;
+    json += ",\"y2\":";
+    json += visionData.horizon.y2;
+    json += "},\"blobs\":[";
+
+    for(uint8_t i = 0; i < visionData.blobCount; i++) {
+        if(i > 0) {
+            json += ",";
+        }
+
+        appendVisionBlobJson(json, visionData.blobs[i]);
+    }
+
+    json += "]}";
+    return json;
+}
+
+void AntennaSerialTransmitter::appendVisionBlobJson(String& json, const RoverVisionBlob& blob) const {
+    json += "{";
+    json += "\"id\":\"";
+    json += blob.id;
+    json += "\",\"cx\":";
+    json += blob.cx;
+    json += ",\"cy\":";
+    json += blob.cy;
+    json += ",\"a\":";
+    json += blob.a;
+    json += ",\"b\":";
+    json += blob.b;
+    json += ",\"rotation\":";
+    json += blob.rotation;
+    json += ",\"confidence\":";
+    json += String(blob.confidence, 2);
+    json += ",\"pixels\":";
+    json += blob.pixels;
     json += "}";
 }

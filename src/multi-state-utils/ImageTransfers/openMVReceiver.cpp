@@ -22,6 +22,21 @@ bool OpenMVReceiver::runReceiver() {
             return false;
         }
 
+        if(checkForVisionStart(receivedData)) {
+            handleVisionStart(receivedData);
+            return false;
+        }
+
+        if(receivingVision) {
+            if(checkForVisionEnd(receivedData)) {
+                handleVisionEnd();
+            } else {
+                handleVisionLine(receivedData);
+            }
+
+            return false;
+        }
+
         // check for the start of a transmission and start the receiving chain writing to the next open spot in the queue
         if(checkForTransmissionStart(receivedData)) {
             handleTransmissionStart(receivedData);
@@ -65,6 +80,22 @@ bool OpenMVReceiver::getImage(String& outBase64Data, int& outByteCount) {
     currentQueueSize--;
 
     return true;
+}
+
+bool OpenMVReceiver::getVisionData(RoverVisionFrame& outVisionData) {
+    if(!pendingVisionAvailable) {
+        return false;
+    }
+
+    outVisionData = pendingVisionData;
+    pendingVisionData = RoverVisionFrame();
+    pendingVisionAvailable = false;
+
+    return true;
+}
+
+bool OpenMVReceiver::hasVisionData() const {
+    return pendingVisionAvailable;
 }
 
 uint8_t OpenMVReceiver::queueSize() {
@@ -114,6 +145,14 @@ bool OpenMVReceiver::checkForTransmissionEnd(const String& receivedData) {
 
 bool OpenMVReceiver::checkForDiagnosticLine(const String& receivedData) {
     return receivedData.startsWith("DBG_");
+}
+
+bool OpenMVReceiver::checkForVisionStart(const String& receivedData) {
+    return receivedData.startsWith("VISION_BEGIN");
+}
+
+bool OpenMVReceiver::checkForVisionEnd(const String& receivedData) {
+    return receivedData == "VISION_END";
 }
 
 void OpenMVReceiver::handleTransmissionStart(String& receivedData) {
@@ -194,4 +233,89 @@ void OpenMVReceiver::handleTransmission(String& receivedData, String& queueLoc, 
     byteCount += receivedData.length();
     incomingBase64CharCount += receivedData.length();
     incomingChunkCount++;
+}
+
+void OpenMVReceiver::handleVisionStart(const String& receivedData) {
+    incomingVisionData = RoverVisionFrame();
+    incomingExpectedVisionBlobCount = 0;
+    receivingVision = true;
+    receiving = false;
+
+    int tokenIndex = 0;
+    parseNextToken(receivedData, tokenIndex);
+
+    incomingVisionData.frameWidth = parseNextToken(receivedData, tokenIndex).toInt();
+    incomingVisionData.frameHeight = parseNextToken(receivedData, tokenIndex).toInt();
+    incomingVisionData.timestamp = static_cast<uint32_t>(parseNextToken(receivedData, tokenIndex).toInt());
+    incomingExpectedVisionBlobCount = parseNextToken(receivedData, tokenIndex).toInt();
+}
+
+void OpenMVReceiver::handleVisionLine(const String& receivedData) {
+    if(receivedData.startsWith("VISION_HORIZON")) {
+        int tokenIndex = 0;
+        parseNextToken(receivedData, tokenIndex);
+
+        incomingVisionData.horizon.x1 = parseNextToken(receivedData, tokenIndex).toInt();
+        incomingVisionData.horizon.y1 = parseNextToken(receivedData, tokenIndex).toInt();
+        incomingVisionData.horizon.x2 = parseNextToken(receivedData, tokenIndex).toInt();
+        incomingVisionData.horizon.y2 = parseNextToken(receivedData, tokenIndex).toInt();
+        return;
+    }
+
+    if(!receivedData.startsWith("VISION_BLOB")) {
+        return;
+    }
+
+    if(incomingVisionData.blobCount >= MAX_ROVER_VISION_BLOBS) {
+        return;
+    }
+
+    int tokenIndex = 0;
+    parseNextToken(receivedData, tokenIndex);
+
+    RoverVisionBlob& blob = incomingVisionData.blobs[incomingVisionData.blobCount];
+    blob.id = parseNextToken(receivedData, tokenIndex);
+    blob.cx = parseNextToken(receivedData, tokenIndex).toInt();
+    blob.cy = parseNextToken(receivedData, tokenIndex).toInt();
+    blob.a = parseNextToken(receivedData, tokenIndex).toInt();
+    blob.b = parseNextToken(receivedData, tokenIndex).toInt();
+    blob.rotation = parseNextToken(receivedData, tokenIndex).toInt();
+    blob.confidence = parseNextToken(receivedData, tokenIndex).toFloat() / 100.0f;
+    blob.pixels = parseNextToken(receivedData, tokenIndex).toInt();
+    incomingVisionData.blobCount++;
+}
+
+void OpenMVReceiver::handleVisionEnd() {
+    receivingVision = false;
+
+    if(incomingExpectedVisionBlobCount < 0) {
+        incomingExpectedVisionBlobCount = 0;
+    }
+
+    pendingVisionData = incomingVisionData;
+    pendingVisionAvailable = true;
+    incomingVisionData = RoverVisionFrame();
+    incomingExpectedVisionBlobCount = 0;
+}
+
+String OpenMVReceiver::parseNextToken(const String& data, int& startIndex) const {
+    while(startIndex < data.length() && data.charAt(startIndex) == ' ') {
+        startIndex++;
+    }
+
+    if(startIndex >= data.length()) {
+        return "";
+    }
+
+    int endIndex = data.indexOf(' ', startIndex);
+
+    if(endIndex < 0) {
+        String token = data.substring(startIndex);
+        startIndex = data.length();
+        return token;
+    }
+
+    String token = data.substring(startIndex, endIndex);
+    startIndex = endIndex + 1;
+    return token;
 }

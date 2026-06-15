@@ -203,6 +203,27 @@ bool AntennaConnectorInterface::intakeImageData(const String& base64Data, int by
     return true;
 }
 
+void AntennaConnectorInterface::intakeVisionData(const RoverVisionFrame& visionData) {
+    pendingVisionData = visionData;
+    pendingVisionAvailable = true;
+}
+
+bool AntennaConnectorInterface::accessVisionData(RoverVisionFrame& visionData) {
+    if (!pendingVisionAvailable) {
+        return false;
+    }
+
+    visionData = pendingVisionData;
+    pendingVisionData = RoverVisionFrame();
+    pendingVisionAvailable = false;
+
+    return true;
+}
+
+bool AntennaConnectorInterface::hasVisionData() const {
+    return pendingVisionAvailable;
+}
+
 void AntennaConnectorInterface::updateRawConnection(bool currentConnection, uint32_t now) {
     if (currentConnection == rawConnection) {
         return;

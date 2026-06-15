@@ -102,6 +102,7 @@ class AntennaSerialTransmitter {
 
     bool beginImageTransfer();
     bool sendNextImagePacket();
+    bool sendVisionPacket();
     bool sendTelemetryOnlyPacket();
     bool writePacket(const String& packet);
     bool flushOutgoingPacket();
@@ -112,5 +113,7 @@ class AntennaSerialTransmitter {
     void printDebugThrottled(const char* message);
 
     String buildPacket(const String* imageChunk, bool finalChunk);
+    String buildVisionPacket(const RoverVisionFrame& visionData) const;
     void appendSensorJson(String& json) const;
+    void appendVisionBlobJson(String& json, const RoverVisionBlob& blob) const;
 };

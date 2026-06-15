@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "VisionData.h"
 
 class OpenMVReceiver {
     public:
@@ -27,6 +28,19 @@ class OpenMVReceiver {
          */
         bool getImage(String& outBase64Data, int& outByteCount);
 
+        /**
+         * Copy out the latest completed OpenMV vision frame.
+         *
+         * Returns true if a frame was available. The frame is consumed after a
+         * successful read so downstream code only transmits each frame once.
+         */
+        bool getVisionData(RoverVisionFrame& outVisionData);
+
+        /**
+         * Returns true when a completed OpenMV vision frame is waiting.
+         */
+        bool hasVisionData() const;
+
         void testInput(const String& testInput, int& inputLength);
 
     private:
@@ -37,17 +51,28 @@ class OpenMVReceiver {
         bool checkForTransmissionStart(const String& receivedData);
         bool checkForTransmissionEnd(const String& receivedData);
         bool checkForDiagnosticLine(const String& receivedData);
+        bool checkForVisionStart(const String& receivedData);
+        bool checkForVisionEnd(const String& receivedData);
 
         void handleTransmissionStart(String& receivedData);
         void handleTransmissionEnd(String& receivedData);
         int expectedBase64Chars(int decodedByteCount);
 
         void handleTransmission(String& receivedData, String& queueLoc, int& byteCount);
+        void handleVisionStart(const String& receivedData);
+        void handleVisionLine(const String& receivedData);
+        void handleVisionEnd();
+        String parseNextToken(const String& data, int& startIndex) const;
 
         bool receiving = false;
+        bool receivingVision = false;
         int incomingExpectedByteCount = 0;
         int incomingBase64CharCount = 0;
         int incomingChunkCount = 0;
+        int incomingExpectedVisionBlobCount = 0;
+        RoverVisionFrame incomingVisionData;
+        RoverVisionFrame pendingVisionData;
+        bool pendingVisionAvailable = false;
 
         String testInputData = "";
         Stream* inputStream = nullptr;

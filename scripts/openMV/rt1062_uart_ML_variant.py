@@ -12,6 +12,7 @@ BAUDRATE = 10600
 CHUNK_SIZE = 48
 INTER_LINE_DELAY_MS = 2
 FRAME_INTERVAL_MS = 0
+VISION_LINE_DELAY_MS = 1
 
 FRAME_SIZE = csi.QQVGA
 JPEG_QUALITY = 50
@@ -30,6 +31,7 @@ MAX_BUSH_PIXELS = 3000
 HORIZON_LINE_THRESHOLD = 1000
 HORIZON_THETA_DEGREES = 90
 HORIZON_THETA_MARGIN_DEGREES = 20
+MAX_VISION_BLOBS = 12
 
 BushDetection = namedtuple("BushDetection", "blobs sizes centers")
 HorizonDetection = namedtuple("HorizonDetection", "line coords y_px candidates")
@@ -80,6 +82,67 @@ def write_base64_lines(uart, image_bytes):
     #     "DBG_OPENMV_END jpeg_bytes=%d base64_chars=%d chunks=%d chunk_size=%d baud=%d\n"
     #     % (len(image_bytes), len(encoded), chunks, CHUNK_SIZE, BAUDRATE)
     # )
+
+
+def blob_ellipse_fields(blob):
+    try:
+        ellipse = blob.enclosed_ellipse()
+        return int(ellipse[2]), int(ellipse[3]), int(ellipse[4])
+    except Exception:
+        return int(blob.w() // 2), int(blob.h() // 2), 0
+
+
+def blob_confidence_percent(blob):
+    try:
+        confidence = blob.density()
+    except Exception:
+        area = blob.w() * blob.h()
+        if area <= 0:
+            confidence = 0
+        else:
+            confidence = blob.pixels() / area
+
+    if confidence < 0:
+        confidence = 0
+    elif confidence > 1:
+        confidence = 1
+
+    return int(confidence * 100)
+
+
+def write_vision_lines(uart, img, bush_detection, horizon_detection):
+    vision_blobs = bush_detection.blobs[:MAX_VISION_BLOBS]
+
+    uart.write("VISION_BEGIN %d %d %d %d\n" % (
+        img.width(),
+        img.height(),
+        time.ticks_ms(),
+        len(vision_blobs)
+    ))
+    time.sleep_ms(VISION_LINE_DELAY_MS)
+
+    x1, y1, x2, y2 = horizon_detection.coords
+    uart.write("VISION_HORIZON %d %d %d %d\n" % (x1, y1, x2, y2))
+    time.sleep_ms(VISION_LINE_DELAY_MS)
+
+    for index, blob in enumerate(vision_blobs):
+        a, b, rotation = blob_ellipse_fields(blob)
+        confidence_percent = blob_confidence_percent(blob)
+
+        uart.write("VISION_BLOB bush-%02d %d %d %d %d %d %d %d\n" % (
+            index,
+            blob.cx(),
+            blob.cy(),
+            a,
+            b,
+            rotation,
+            confidence_percent,
+            blob.pixels()
+        ))
+        time.sleep_ms(VISION_LINE_DELAY_MS)
+
+    uart.write("VISION_END\n")
+    time.sleep_ms(VISION_LINE_DELAY_MS)
 
 
 def find_bushes(img):
@@ -201,6 +264,11 @@ while True:
         img.draw_line(horizon_detection.coords, color = (255, 0, 0))
     except Exception as exc:
         print("Image drawing error:", exc)
-   
 
+    try:
+        write_vision_lines(uart, img, bush_detection, horizon_detection)
+    except Exception as exc:
+        print("Vision UART send error:", exc)
 
+    gc.collect()
+    time.sleep_ms(FRAME_INTERVAL_MS)

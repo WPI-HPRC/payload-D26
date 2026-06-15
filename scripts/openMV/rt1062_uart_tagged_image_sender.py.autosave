@@ -65,7 +65,7 @@ def write_base64_lines(uart, image_bytes):
 
 
 def blink_to_show_running():
-    led = LED("LED_RED")
+    led = LED("LED_GREEN")
     for _ in range(3):
         led.on()
         time.sleep_ms(200)

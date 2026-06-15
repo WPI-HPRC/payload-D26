@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "../ImageTransfers/VisionData.h"
 
 class AntennaConnectorInterface {
   public:
@@ -193,6 +194,24 @@ class AntennaConnectorInterface {
      */
     bool intakeImageData(const String& base64Data, int byteCount);
 
+    /**
+     * Copy the latest OpenMV coordinate frame into private interface storage.
+     */
+    void intakeVisionData(const RoverVisionFrame& visionData);
+
+    /**
+     * Copy out the pending OpenMV coordinate frame.
+     *
+     * Returns true if a frame was available. The frame is consumed after a
+     * successful read so each frame is transmitted once.
+     */
+    bool accessVisionData(RoverVisionFrame& visionData);
+
+    /**
+     * Returns true when a coordinate frame is waiting for antenna transmission.
+     */
+    bool hasVisionData() const;
+
   private:
     bool rawConnection = false;
     bool confirmedConnection = false;
@@ -207,6 +226,8 @@ class AntennaConnectorInterface {
     int pendingImageByteCount = 0;
     bool pendingImageAvailable = false;
     bool pendingImageLocked = false;
+    RoverVisionFrame pendingVisionData;
+    bool pendingVisionAvailable = false;
 
     void updateRawConnection(bool currentConnection, uint32_t now);
 };
