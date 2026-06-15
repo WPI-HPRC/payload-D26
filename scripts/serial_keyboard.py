@@ -103,12 +103,26 @@ def write_key_input(ser, stop_event):
         write_key_input_posix(ser, stop_event)
 
 
+def normalize_port(port):
+    if port is None:
+        return DEFAULT_PORT
+
+    port = port.strip()
+    if port.isdigit():
+        return f"COM{port}"
+
+    return port
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Send keyboard input to the payload board over serial.")
-    parser.add_argument("--port", default=DEFAULT_PORT, help=f"Serial port. Default: {DEFAULT_PORT}")
+    parser.add_argument("com", nargs="?", help=f"Optional COM number or serial port. Default: {DEFAULT_PORT}")
+    parser.add_argument("--port", default=None, help=f"Serial port. Overrides positional COM. Default: {DEFAULT_PORT}")
     parser.add_argument("--baud", type=int, default=DEFAULT_BAUD, help=f"Baud rate. Default: {DEFAULT_BAUD}")
     parser.add_argument("--line", action="store_true", help="Send one full line at a time instead of raw keypresses.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.port = normalize_port(args.port or args.com)
+    return args
 
 
 def main():

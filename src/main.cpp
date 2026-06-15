@@ -1,6 +1,15 @@
 #include "Context.h"
 
-#include "variant_MARSV21.h"
+#if defined(ARDUINO_MARSv20)
+  #include "variant_MARSV20.h"
+#elif defined(ARDUINO_MARSv21)
+  #include "variant_MARSV21.h"
+#else
+  #error "No variant specified. Please define ARDUINO_MARSv20 or ARDUINO_MARSv21"
+#endif
+
+
+#include "variant_MARSV20.h"
 #include <Arduino.h>
 
 #include <HardwareSerial.h>
