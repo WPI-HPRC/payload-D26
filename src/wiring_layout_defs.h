@@ -7,10 +7,10 @@
 #pragma once
 
 // testing functionality on a V2.0 board with different wiring layout than the real rover
-#define ALEX_TEST_WIRING_LAYOUT
+//#define ALEX_TEST_WIRING_LAYOUT
 
 // actual wiring layout for the rover 
-//#define ACTUAL_ROVER_WIRING_LAYOUT
+#define ACTUAL_ROVER_WIRING_LAYOUT
 
 #ifdef ALEX_TEST_WIRING_LAYOUT
     // camera serial (connected to openMV)
@@ -32,17 +32,16 @@
 
 #ifdef ACTUAL_ROVER_WIRING_LAYOUT
     // camera serial (connected to openMV)
-    #define CAMERA_SERIAL_RX CAMERA_SCK
-    #define CAMERA_SERIAL_TX CAMERA_CS
+    #define CAMERA_SERIAL_RX PA1
+    #define CAMERA_SERIAL_TX PA0
 
     // screw drive pins
-    #define LEFT_SCREW_PWM PWM_OUT5
-    #define RIGHT_SCREW_PWM PWM_OUT6
+    #define LEFT_SCREW_PWM PWM_OUT3
+    #define RIGHT_SCREW_PWM PWM_OUT4
 
-    #define LATCH_SERVO_PWM PWM_OUT1
+    #define LATCH_SERVO_PWM ADC_INP5
+    #define ANTENNA_SERVO_PWM CAMERA_MISO // this is wrong but just to compile (needs to be PE6 eventually but not in table)
 
-    #define ANTENNA_SERVO_PWM PWM_OUT3
-
-    #define SELF_RIGHTING_PWM1 PWM_OUT2
-    #define SELF_RIGHTING_PWM2 PWM_OUT3
+    #define SELF_RIGHTING_PWM1 ADC_INP3
+    #define SELF_RIGHTING_PWM2 ADC_INN3
 #endif
