@@ -265,11 +265,11 @@ void *payloadROVInit(StateData const *data) {
     screwDrive.beginArm();
 
     // set up the antenna serial transmitter and OpenMV receiver input stream
-    //CAMERA_SERIAL.begin(115200);
-    pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
-    SOFT_CAM_SERIAL.begin(10600);
-    SOFT_CAM_SERIAL.listen();
-    openMVReceiver.setInputStream(&SOFT_CAM_SERIAL);
+    CAMERA_SERIAL.begin(115200);
+    // pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
+    // SOFT_CAM_SERIAL.begin(10600);
+    // SOFT_CAM_SERIAL.listen();
+    openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
     if (ENABLE_OPENMV_RAW_MONITOR && ENABLE_OPENMV_RAW_MONITOR_STATUS) {
         Serial.print("DBG_OPENMV_RAW_MONITOR_READY baud=57600 rx_pin=");

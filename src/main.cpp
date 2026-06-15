@@ -55,7 +55,7 @@ ScrewDriveInterface screwDrive;
 // alternate solution to repining conflict
 SoftwareSerial SOFT_CAM_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 
-OpenMVReceiver openMVReceiver(&SOFT_CAM_SERIAL);
+OpenMVReceiver openMVReceiver(&CAMERA_SERIAL);
 
 /// Actuators
 Servo latchServo;
