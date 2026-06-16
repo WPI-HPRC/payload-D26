@@ -1,11 +1,13 @@
 #include "../State.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
+#include "../multi-state-utils/VoltageSensor/VoltageSensorInterface.h"
 
 static constexpr float DEPLOY_SPEED = 0.35f;
 static constexpr float DEPLOY_TURN_CORRECTION = 0.0f;
 static constexpr uint32_t DEPLOYMENT_DURATION_MS = 1000; // Duration to simulate deployment in milliseconds
 
 extern ScrewDriveInterface screwDrive;
+extern VoltageSensorInterface voltageSensor;
 
 bool checkDeploymentComplete(String input, StateData const *data) {
     
@@ -31,10 +33,9 @@ void handleDeploymentComplete() {
 }
 
 bool checkDeploymentFailure(String input, StateData const *data) {
-    
-
-    // if get large current draw
-
+    if (voltageSensor.checkVoltageDrop()) {
+        return true;
+    }
 
     // test hook: check for a serial command to simulate deployment failure
     if(input == "deployment_failed") {
@@ -61,6 +62,7 @@ void *payloadDeployingInit(StateData const *data) {
     Serial.println("Entered Payload Deploying State...");
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
     screwDrive.beginArm();
+    voltageSensor.resetVoltageDropReference();
 
     return nullptr;
 }

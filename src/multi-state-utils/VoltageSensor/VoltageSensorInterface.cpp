@@ -6,14 +6,18 @@ VoltageSensorInterface::VoltageSensorInterface(
     float adcReferenceVoltage,
     float dividerRatio,
     uint16_t adcMaxReading,
-    uint32_t pollIntervalMs
+    uint32_t pollIntervalMs,
+    float voltageDropThreshold,
+    float zeroVoltageThreshold
 ) :
     positivePin(positivePin),
     negativePin(negativePin),
     adcReferenceVoltage(adcReferenceVoltage),
     dividerRatio(dividerRatio),
     adcMaxReading(adcMaxReading),
-    pollIntervalMs(pollIntervalMs) {}
+    pollIntervalMs(pollIntervalMs),
+    voltageDropThreshold(voltageDropThreshold),
+    zeroVoltageThreshold(zeroVoltageThreshold) {}
 
 void VoltageSensorInterface::begin() {
     pinMode(positivePin, INPUT);
@@ -42,6 +46,7 @@ void VoltageSensorInterface::poll() {
               adcReferenceVoltage *
               dividerRatio;
 
+    updateVoltageDropReference();
     publishReading();
     printDebugReading();
 }
@@ -62,8 +67,47 @@ void VoltageSensorInterface::setPollInterval(uint32_t intervalMs) {
     pollIntervalMs = intervalMs;
 }
 
+void VoltageSensorInterface::setVoltageDropThreshold(float threshold) {
+    voltageDropThreshold = max(0.0f, threshold);
+}
+
+void VoltageSensorInterface::setZeroVoltageThreshold(float threshold) {
+    zeroVoltageThreshold = max(0.0f, threshold);
+}
+
+void VoltageSensorInterface::resetVoltageDropReference() {
+    if (isApproxZeroVoltage(voltage)) {
+        hasVoltageDropReference = false;
+        voltageDropReference = 0.0f;
+        return;
+    }
+
+    voltageDropReference = voltage;
+    hasVoltageDropReference = true;
+}
+
+bool VoltageSensorInterface::checkVoltageDrop() const {
+    if (!hasVoltageDropReference || isApproxZeroVoltage(voltage)) {
+        return false;
+    }
+
+    return getVoltageDrop() >= voltageDropThreshold;
+}
+
 float VoltageSensorInterface::getVoltage() const {
     return voltage;
+}
+
+float VoltageSensorInterface::getVoltageDropReference() const {
+    return voltageDropReference;
+}
+
+float VoltageSensorInterface::getVoltageDrop() const {
+    if (!hasVoltageDropReference || voltage >= voltageDropReference) {
+        return 0.0f;
+    }
+
+    return voltageDropReference - voltage;
 }
 
 int VoltageSensorInterface::getRawPositiveReading() const {
@@ -76,6 +120,21 @@ int VoltageSensorInterface::getRawNegativeReading() const {
 
 int VoltageSensorInterface::getRawDifferentialReading() const {
     return rawDifferentialReading;
+}
+
+bool VoltageSensorInterface::isApproxZeroVoltage(float voltage) const {
+    return voltage <= zeroVoltageThreshold;
+}
+
+void VoltageSensorInterface::updateVoltageDropReference() {
+    if (isApproxZeroVoltage(voltage)) {
+        return;
+    }
+
+    if (!hasVoltageDropReference || voltage > voltageDropReference) {
+        voltageDropReference = voltage;
+        hasVoltageDropReference = true;
+    }
 }
 
 void VoltageSensorInterface::publishReading() {
@@ -99,5 +158,11 @@ void VoltageSensorInterface::printDebugReading() {
     debugOutput->print(rawDifferentialReading);
     debugOutput->print(",\"voltage\":");
     debugOutput->print(voltage, 3);
+    debugOutput->print(",\"dropReference\":");
+    debugOutput->print(voltageDropReference, 3);
+    debugOutput->print(",\"drop\":");
+    debugOutput->print(getVoltageDrop(), 3);
+    debugOutput->print(",\"dropDetected\":");
+    debugOutput->print(checkVoltageDrop() ? "true" : "false");
     debugOutput->println("}");
 }

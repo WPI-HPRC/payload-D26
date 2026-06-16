@@ -36,6 +36,8 @@
 
 #define OUTPUT_SENSOR_DATA false
 static constexpr bool ENABLE_VOLTAGE_SENSOR_DEBUG = false;
+static constexpr float VOLTAGE_DROP_FAILURE_THRESHOLD = 1.0f;
+static constexpr float VOLTAGE_SENSOR_ZERO_THRESHOLD = 0.5f;
 
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
@@ -350,6 +352,8 @@ void setup() {
 
   Serial.begin(115200);
   voltageSensor.begin();
+  voltageSensor.setVoltageDropThreshold(VOLTAGE_DROP_FAILURE_THRESHOLD);
+  voltageSensor.setZeroVoltageThreshold(VOLTAGE_SENSOR_ZERO_THRESHOLD);
   voltageSensor.setDebugOutput(&Serial);
   voltageSensor.setDebugEnabled(ENABLE_VOLTAGE_SENSOR_DEBUG);
   // radioInit();
