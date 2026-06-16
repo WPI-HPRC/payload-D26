@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "OpenMVMLData.h"
 
 class OpenMVReceiver {
     public:
@@ -27,6 +28,9 @@ class OpenMVReceiver {
          */
         bool getImage(String& outBase64Data, int& outByteCount);
 
+        bool hasMLResult() const;
+        bool getMLResult(OpenMVMLData& outMLResult);
+
         void testInput(const String& testInput, int& inputLength);
 
     private:
@@ -37,6 +41,8 @@ class OpenMVReceiver {
         bool checkForTransmissionStart(const String& receivedData);
         bool checkForTransmissionEnd(const String& receivedData);
         bool checkForDiagnosticLine(const String& receivedData);
+        bool checkForConfigLine(const String& receivedData);
+        bool checkForMLLine(const String& receivedData);
 
         void handleTransmissionStart(String& receivedData);
         void handleTransmissionEnd(String& receivedData);
@@ -44,6 +50,12 @@ class OpenMVReceiver {
         int expectedBase64Chars(int decodedByteCount);
 
         void handleTransmission(String& receivedData, String& queueLoc, int& byteCount);
+        void handleMLLine(const String& receivedData);
+        void handleMLBegin(const String& receivedData);
+        void handleMLHorizon(const String& receivedData);
+        void handleMLBlob(const String& receivedData);
+        void handleMLEnd();
+        void resetIncomingMLResult();
 
         bool receiving = false;
         int incomingExpectedByteCount = 0;
@@ -53,8 +65,13 @@ class OpenMVReceiver {
         String testInputData = "";
         Stream* inputStream = nullptr;
         String streamLineBuffer = "";
+
+        bool mlReceiving = false;
+        bool mlResultAvailable = false;
+        OpenMVMLData incomingMLResult = {};
+        OpenMVMLData pendingMLResult = {};
         
-        const static uint8_t maxQueueSize = 1;
+        const static uint8_t maxQueueSize = 10;
         const static int maxLineLength = 512;
         const static int maxImageByteCount = 16384;
         const static int maxBase64CharCount = 4 * ((maxImageByteCount + 2) / 3);

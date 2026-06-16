@@ -20,6 +20,15 @@ static void feedCompleteImage(OpenMVReceiver& receiver, const String& image)
     TEST_ASSERT_TRUE(feedReceiverChunk(receiver, "IMG_END"));
 }
 
+static void feedCompleteML(OpenMVReceiver& receiver)
+{
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BEGIN 42 2"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_HORIZON 1 77 0 77 159 79"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BLOB 0 20 90 123 20 90 8 5 0"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BLOB 1 100 95 250 100 95 12 7 3"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_END"));
+}
+
 void setUp(void)
 {
 }
@@ -120,11 +129,135 @@ void test_open_mv_receiver_uses_img_begin_byte_count_metadata(void)
     TEST_ASSERT_EQUAL_UINT8(0, receiver.queueSize());
 }
 
+void test_open_mv_receiver_parses_ml_result(void)
+{
+    OpenMVReceiver receiver;
+    OpenMVMLData mlData = {};
+
+    feedCompleteML(receiver);
+
+    TEST_ASSERT_TRUE(receiver.hasMLResult());
+    TEST_ASSERT_TRUE(receiver.getMLResult(mlData));
+    TEST_ASSERT_FALSE(receiver.hasMLResult());
+
+    TEST_ASSERT_EQUAL_UINT32(42, mlData.frameId);
+    TEST_ASSERT_TRUE(mlData.horizonValid);
+    TEST_ASSERT_EQUAL_INT16(77, mlData.horizonYPx);
+    TEST_ASSERT_EQUAL_INT16(0, mlData.horizonX1);
+    TEST_ASSERT_EQUAL_INT16(77, mlData.horizonY1);
+    TEST_ASSERT_EQUAL_INT16(159, mlData.horizonX2);
+    TEST_ASSERT_EQUAL_INT16(79, mlData.horizonY2);
+    TEST_ASSERT_EQUAL_UINT8(2, mlData.expectedBlobCount);
+    TEST_ASSERT_EQUAL_UINT8(2, mlData.blobCount);
+    TEST_ASSERT_FALSE(mlData.droppedBlobs);
+
+    TEST_ASSERT_EQUAL_INT16(20, mlData.blobs[0].cx);
+    TEST_ASSERT_EQUAL_INT16(90, mlData.blobs[0].cy);
+    TEST_ASSERT_EQUAL_UINT16(123, mlData.blobs[0].pixels);
+    TEST_ASSERT_TRUE(mlData.blobs[0].hasEllipse);
+    TEST_ASSERT_EQUAL_INT16(8, mlData.blobs[0].ellipseRx);
+
+    TEST_ASSERT_EQUAL_INT16(100, mlData.blobs[1].cx);
+    TEST_ASSERT_EQUAL_UINT16(250, mlData.blobs[1].pixels);
+}
+
+void test_open_mv_receiver_handles_ml_then_image_independently(void)
+{
+    OpenMVReceiver receiver;
+    OpenMVMLData mlData = {};
+    String receivedImage = "";
+    int receivedByteCount = 0;
+
+    feedCompleteML(receiver);
+    feedCompleteImage(receiver, "image_after_ml");
+
+    TEST_ASSERT_TRUE(receiver.getMLResult(mlData));
+    TEST_ASSERT_EQUAL_UINT32(42, mlData.frameId);
+
+    TEST_ASSERT_EQUAL_UINT8(1, receiver.queueSize());
+    TEST_ASSERT_TRUE(receiver.getImage(receivedImage, receivedByteCount));
+    TEST_ASSERT_EQUAL_STRING("image_after_ml", receivedImage.c_str());
+    TEST_ASSERT_EQUAL(14, receivedByteCount);
+}
+
+void test_open_mv_receiver_ignores_cfg_and_dbg_outside_image_framing(void)
+{
+    OpenMVReceiver receiver;
+    String receivedImage = "";
+    int receivedByteCount = 0;
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "CFG IMG=1 ML=1 DBG=0"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "DBG_OPENMV_RATE fps=1.00"));
+    feedCompleteImage(receiver, "clean_image");
+
+    TEST_ASSERT_EQUAL_UINT8(1, receiver.queueSize());
+    TEST_ASSERT_TRUE(receiver.getImage(receivedImage, receivedByteCount));
+    TEST_ASSERT_EQUAL_STRING("clean_image", receivedImage.c_str());
+    TEST_ASSERT_EQUAL(11, receivedByteCount);
+}
+
+void test_open_mv_receiver_drops_malformed_ml_without_corrupting_images(void)
+{
+    OpenMVReceiver receiver;
+    String receivedImage = "";
+    int receivedByteCount = 0;
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BEGIN 50 1"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_HORIZON 1 60 0 60 159 61"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BLOB bad"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_END"));
+    TEST_ASSERT_FALSE(receiver.hasMLResult());
+
+    feedCompleteImage(receiver, "image_after_bad_ml");
+
+    TEST_ASSERT_TRUE(receiver.getImage(receivedImage, receivedByteCount));
+    TEST_ASSERT_EQUAL_STRING("image_after_bad_ml", receivedImage.c_str());
+    TEST_ASSERT_EQUAL(18, receivedByteCount);
+}
+
+void test_open_mv_receiver_flags_extra_ml_blobs(void)
+{
+    OpenMVReceiver receiver;
+    OpenMVMLData mlData = {};
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BEGIN 99 18"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_HORIZON 0 80 0 80 159 80"));
+
+    for (int i = 0; i < 18; i++) {
+        String line = "ML_BLOB ";
+        line += String(i);
+        line += " 10 20 30";
+        TEST_ASSERT_FALSE(feedReceiverChunk(receiver, line));
+    }
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_END"));
+    TEST_ASSERT_TRUE(receiver.getMLResult(mlData));
+    TEST_ASSERT_EQUAL_UINT32(99, mlData.frameId);
+    TEST_ASSERT_EQUAL_UINT8(16, mlData.blobCount);
+    TEST_ASSERT_TRUE(mlData.droppedBlobs);
+}
+
+void test_open_mv_receiver_does_not_publish_ml_without_end(void)
+{
+    OpenMVReceiver receiver;
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BEGIN 101 1"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_HORIZON 1 55 0 55 159 55"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "ML_BLOB 0 30 40 50"));
+    TEST_ASSERT_FALSE(receiver.hasMLResult());
+}
+
 int main(int argc, char** argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_open_mv_receiver_queues_and_returns_images_in_order);
     RUN_TEST(test_open_mv_receiver_drops_oldest_images_when_queue_is_overloaded);
     RUN_TEST(test_open_mv_receiver_uses_img_begin_byte_count_metadata);
+    RUN_TEST(test_open_mv_receiver_parses_ml_result);
+    RUN_TEST(test_open_mv_receiver_handles_ml_then_image_independently);
+    RUN_TEST(test_open_mv_receiver_ignores_cfg_and_dbg_outside_image_framing);
+    RUN_TEST(test_open_mv_receiver_drops_malformed_ml_without_corrupting_images);
+    RUN_TEST(test_open_mv_receiver_flags_extra_ml_blobs);
+    RUN_TEST(test_open_mv_receiver_does_not_publish_ml_without_end);
     return UNITY_END();
 }

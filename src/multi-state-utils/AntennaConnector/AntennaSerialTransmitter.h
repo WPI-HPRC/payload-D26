@@ -113,4 +113,5 @@ class AntennaSerialTransmitter {
 
     String buildPacket(const String* imageChunk, bool finalChunk);
     void appendSensorJson(String& json) const;
+    void appendMLJson(String& json) const;
 };

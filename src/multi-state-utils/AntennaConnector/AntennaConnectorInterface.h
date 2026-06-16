@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "../ImageTransfers/OpenMVMLData.h"
 
 class AntennaConnectorInterface {
   public:
@@ -41,6 +42,9 @@ class AntennaConnectorInterface {
          */
         void get(float &speedOutput, float &turnOutput) const;
     };
+
+    using OpenMVMLBlob = ::OpenMVMLBlob;
+    using OpenMVMLData = ::OpenMVMLData;
 
     SensorData sensorData;
     DriveData driveData;
@@ -193,6 +197,10 @@ class AntennaConnectorInterface {
      */
     bool intakeImageData(const String& base64Data, int byteCount);
 
+    bool hasOpenMVMLData() const;
+    bool accessOpenMVMLData(OpenMVMLData& data) const;
+    bool intakeOpenMVMLData(const OpenMVMLData& data);
+
   private:
     bool rawConnection = false;
     bool confirmedConnection = false;
@@ -207,6 +215,9 @@ class AntennaConnectorInterface {
     int pendingImageByteCount = 0;
     bool pendingImageAvailable = false;
     bool pendingImageLocked = false;
+
+    OpenMVMLData latestOpenMVMLData = {};
+    bool openMVMLDataAvailable = false;
 
     void updateRawConnection(bool currentConnection, uint32_t now);
 };

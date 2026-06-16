@@ -1,6 +1,7 @@
 #include "OpenMVReceiver.h"
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
 
 OpenMVReceiver::OpenMVReceiver(Stream* inputStream) :
     inputStream(inputStream)
@@ -24,19 +25,34 @@ bool OpenMVReceiver::runReceiver() {
             return false;
         }
 
-        // check for the start of a transmission and start the receiving chain writing to the next open spot in the queue
-        if(checkForTransmissionStart(receivedData)) {
-            handleTransmissionStart(receivedData);
-        }
-
-        if(checkForTransmissionEnd(receivedData)) {
-            handleTransmissionEnd(receivedData);
-            return true;
+        if(checkForConfigLine(receivedData)) {
+            return false;
         }
 
         if(receiving) {
+            if(checkForMLLine(receivedData)) {
+                Serial.println("DBG_OPENMV_RX_DROP reason=ml_line_during_image");
+                return false;
+            }
+
+            if(checkForTransmissionEnd(receivedData)) {
+                handleTransmissionEnd(receivedData);
+                return true;
+            }
+
             uint8_t queueLoc = currentQueueSize % maxQueueSize;
             handleTransmission(receivedData, imageQueue[queueLoc], imageSizes[queueLoc]);
+            return false;
+        }
+
+        if(checkForTransmissionStart(receivedData)) {
+            handleTransmissionStart(receivedData);
+            return false;
+        }
+
+        if(checkForMLLine(receivedData)) {
+            handleMLLine(receivedData);
+            return false;
         }
     }
 
@@ -71,6 +87,20 @@ bool OpenMVReceiver::getImage(String& outBase64Data, int& outByteCount) {
 
 uint8_t OpenMVReceiver::queueSize() {
     return currentQueueSize;
+}
+
+bool OpenMVReceiver::hasMLResult() const {
+    return mlResultAvailable;
+}
+
+bool OpenMVReceiver::getMLResult(OpenMVMLData& outMLResult) {
+    if(!mlResultAvailable) {
+        return false;
+    }
+
+    outMLResult = pendingMLResult;
+    mlResultAvailable = false;
+    return true;
 }
 
 bool OpenMVReceiver::receiveData(String& outData, int& outByteCount) {
@@ -126,12 +156,20 @@ bool OpenMVReceiver::checkForDiagnosticLine(const String& receivedData) {
     return receivedData.startsWith("DBG_");
 }
 
+bool OpenMVReceiver::checkForConfigLine(const String& receivedData) {
+    return receivedData.startsWith("CFG");
+}
+
+bool OpenMVReceiver::checkForMLLine(const String& receivedData) {
+    return receivedData.startsWith("ML_");
+}
+
 void OpenMVReceiver::handleTransmissionStart(String& receivedData) {
     resetIncomingTransmission();
 
     int expectedByteCount = parseExpectedByteCount(receivedData);
 
-    if(expectedByteCount <= 0 || expectedByteCount > maxImageByteCount) {
+    if(expectedByteCount == 0 || expectedByteCount > maxImageByteCount) {
         Serial.print("DBG_OPENMV_RX_DROP reason=invalid_byte_count bytes=");
         Serial.println(expectedByteCount);
         receivedData = "";
@@ -157,7 +195,7 @@ int OpenMVReceiver::parseExpectedByteCount(const String& receivedData) {
     int spaceIndex = receivedData.indexOf(' ');
 
     if(spaceIndex < 0) {
-        return 0;
+        return -1;
     }
 
     return receivedData.substring(spaceIndex + 1).toInt();
@@ -248,6 +286,147 @@ void OpenMVReceiver::handleTransmission(String& receivedData, String& queueLoc, 
     byteCount += receivedData.length();
     incomingBase64CharCount = nextBase64CharCount;
     incomingChunkCount++;
+}
+
+void OpenMVReceiver::handleMLLine(const String& receivedData) {
+    if(receivedData.startsWith("ML_BEGIN")) {
+        handleMLBegin(receivedData);
+        return;
+    }
+
+    if(receivedData.startsWith("ML_HORIZON")) {
+        handleMLHorizon(receivedData);
+        return;
+    }
+
+    if(receivedData.startsWith("ML_BLOB")) {
+        handleMLBlob(receivedData);
+        return;
+    }
+
+    if(receivedData.startsWith("ML_END")) {
+        handleMLEnd();
+    }
+}
+
+void OpenMVReceiver::handleMLBegin(const String& receivedData) {
+    unsigned long parsedFrameId = 0;
+    unsigned int parsedBlobCount = 0;
+
+    if(sscanf(receivedData.c_str(), "ML_BEGIN %lu %u", &parsedFrameId, &parsedBlobCount) != 2) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=bad_begin");
+        resetIncomingMLResult();
+        return;
+    }
+
+    resetIncomingMLResult();
+    incomingMLResult.frameId = static_cast<uint32_t>(parsedFrameId);
+    incomingMLResult.expectedBlobCount = parsedBlobCount > 255 ? 255 : static_cast<uint8_t>(parsedBlobCount);
+    incomingMLResult.droppedBlobs = parsedBlobCount > OPENMV_ML_MAX_BLOBS;
+    mlReceiving = true;
+}
+
+void OpenMVReceiver::handleMLHorizon(const String& receivedData) {
+    if(!mlReceiving) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=horizon_without_begin");
+        return;
+    }
+
+    int valid = 0;
+    int yPx = 0;
+    int x1 = 0;
+    int y1 = 0;
+    int x2 = 0;
+    int y2 = 0;
+
+    if(sscanf(receivedData.c_str(), "ML_HORIZON %d %d %d %d %d %d", &valid, &yPx, &x1, &y1, &x2, &y2) != 6) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=bad_horizon");
+        resetIncomingMLResult();
+        return;
+    }
+
+    incomingMLResult.horizonValid = valid != 0;
+    incomingMLResult.horizonYPx = static_cast<int16_t>(yPx);
+    incomingMLResult.horizonX1 = static_cast<int16_t>(x1);
+    incomingMLResult.horizonY1 = static_cast<int16_t>(y1);
+    incomingMLResult.horizonX2 = static_cast<int16_t>(x2);
+    incomingMLResult.horizonY2 = static_cast<int16_t>(y2);
+}
+
+void OpenMVReceiver::handleMLBlob(const String& receivedData) {
+    if(!mlReceiving) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=blob_without_begin");
+        return;
+    }
+
+    int index = 0;
+    int cx = 0;
+    int cy = 0;
+    unsigned int pixels = 0;
+    int ellipseCx = 0;
+    int ellipseCy = 0;
+    int ellipseRx = 0;
+    int ellipseRy = 0;
+    int ellipseRotation = 0;
+    int parsed = sscanf(
+        receivedData.c_str(),
+        "ML_BLOB %d %d %d %u %d %d %d %d %d",
+        &index,
+        &cx,
+        &cy,
+        &pixels,
+        &ellipseCx,
+        &ellipseCy,
+        &ellipseRx,
+        &ellipseRy,
+        &ellipseRotation
+    );
+
+    if(parsed < 4 || index < 0) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=bad_blob");
+        resetIncomingMLResult();
+        return;
+    }
+
+    if(index >= OPENMV_ML_MAX_BLOBS) {
+        incomingMLResult.droppedBlobs = true;
+        Serial.println("DBG_OPENMV_ML_DROP reason=too_many_blobs");
+        return;
+    }
+
+    OpenMVMLBlob& blob = incomingMLResult.blobs[index];
+    blob.cx = static_cast<int16_t>(cx);
+    blob.cy = static_cast<int16_t>(cy);
+    blob.pixels = pixels > 65535 ? 65535 : static_cast<uint16_t>(pixels);
+    blob.hasEllipse = parsed >= 9;
+
+    if(blob.hasEllipse) {
+        blob.ellipseCx = static_cast<int16_t>(ellipseCx);
+        blob.ellipseCy = static_cast<int16_t>(ellipseCy);
+        blob.ellipseRx = static_cast<int16_t>(ellipseRx);
+        blob.ellipseRy = static_cast<int16_t>(ellipseRy);
+        blob.ellipseRotation = static_cast<int16_t>(ellipseRotation);
+    }
+
+    if(index + 1 > incomingMLResult.blobCount) {
+        incomingMLResult.blobCount = static_cast<uint8_t>(index + 1);
+    }
+}
+
+void OpenMVReceiver::handleMLEnd() {
+    if(!mlReceiving) {
+        Serial.println("DBG_OPENMV_ML_DROP reason=end_without_begin");
+        return;
+    }
+
+    pendingMLResult = incomingMLResult;
+    mlResultAvailable = true;
+    resetIncomingMLResult();
+}
+
+void OpenMVReceiver::resetIncomingMLResult() {
+    mlReceiving = false;
+    incomingMLResult = {};
 }
 
 void OpenMVReceiver::resetIncomingTransmission() {

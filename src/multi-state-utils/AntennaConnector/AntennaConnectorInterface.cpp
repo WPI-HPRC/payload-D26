@@ -203,6 +203,26 @@ bool AntennaConnectorInterface::intakeImageData(const String& base64Data, int by
     return true;
 }
 
+bool AntennaConnectorInterface::hasOpenMVMLData() const {
+    return openMVMLDataAvailable;
+}
+
+bool AntennaConnectorInterface::accessOpenMVMLData(OpenMVMLData& data) const {
+    if (!openMVMLDataAvailable) {
+        data = {};
+        return false;
+    }
+
+    data = latestOpenMVMLData;
+    return true;
+}
+
+bool AntennaConnectorInterface::intakeOpenMVMLData(const OpenMVMLData& data) {
+    latestOpenMVMLData = data;
+    openMVMLDataAvailable = true;
+    return true;
+}
+
 void AntennaConnectorInterface::updateRawConnection(bool currentConnection, uint32_t now) {
     if (currentConnection == rawConnection) {
         return;

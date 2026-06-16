@@ -29,6 +29,10 @@ public:
     String() = default;
     String(const char* value) : value(value ? value : "") {}
     String(const std::string& value) : value(value) {}
+    String(int value) : value(std::to_string(value)) {}
+    String(unsigned int value) : value(std::to_string(value)) {}
+    String(long value) : value(std::to_string(value)) {}
+    String(unsigned long value) : value(std::to_string(value)) {}
 
     int length() const
     {
@@ -38,6 +42,11 @@ public:
     const char* c_str() const
     {
         return value.c_str();
+    }
+
+    void reserve(size_t capacity)
+    {
+        value.reserve(capacity);
     }
 
     bool startsWith(const char* prefix) const

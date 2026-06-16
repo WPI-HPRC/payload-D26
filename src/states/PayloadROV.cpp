@@ -313,6 +313,7 @@ StateID payloadROVLoop(StateData const *data, Context *ctx, void *_localData) {
     } else if (ENABLE_OPENMV_IMAGE_RECEIVER) {
         String imageData = "";
         int byteCount = 0;
+        OpenMVMLData mlData = {};
 
 
         // handle image receive from openMV over serial and publish to antenna connector if we're ready to accept images (not currently in the middle of a transmission)
@@ -320,6 +321,10 @@ StateID payloadROVLoop(StateData const *data, Context *ctx, void *_localData) {
             if (openMVReceiver.getImage(imageData, byteCount)) {
                 antennaConnector.intakeImageData(imageData, byteCount);
             }
+        }
+
+        if (openMVReceiver.hasMLResult() && openMVReceiver.getMLResult(mlData)) {
+            antennaConnector.intakeOpenMVMLData(mlData);
         }
 
     }

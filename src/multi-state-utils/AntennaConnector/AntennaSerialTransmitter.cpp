@@ -299,6 +299,8 @@ String AntennaSerialTransmitter::buildPacket(const String* imageChunk, bool fina
         json += "\"}";
     }
 
+    json += ",\"ml\":";
+    appendMLJson(json);
     json += "}";
     return json;
 }
@@ -312,4 +314,72 @@ void AntennaSerialTransmitter::appendSensorJson(String& json) const {
     json += ",\"batteryVoltage\":";
     json += String(antennaConnector->sensorData.batteryVoltage, 3);
     json += "}";
+}
+
+void AntennaSerialTransmitter::appendMLJson(String& json) const {
+    AntennaConnectorInterface::OpenMVMLData mlData = {};
+
+    if (!antennaConnector->accessOpenMVMLData(mlData)) {
+        json += "null";
+        return;
+    }
+
+    json += "{";
+    json += "\"frameId\":";
+    json += mlData.frameId;
+    json += ",\"expectedBlobCount\":";
+    json += mlData.expectedBlobCount;
+    json += ",\"droppedBlobs\":";
+    json += mlData.droppedBlobs ? "true" : "false";
+    json += ",\"horizon\":{";
+    json += "\"valid\":";
+    json += mlData.horizonValid ? "true" : "false";
+    json += ",\"yPx\":";
+    json += mlData.horizonYPx;
+    json += ",\"x1\":";
+    json += mlData.horizonX1;
+    json += ",\"y1\":";
+    json += mlData.horizonY1;
+    json += ",\"x2\":";
+    json += mlData.horizonX2;
+    json += ",\"y2\":";
+    json += mlData.horizonY2;
+    json += "},\"blobs\":[";
+
+    for (uint8_t i = 0; i < mlData.blobCount; i++) {
+        if (i > 0) {
+            json += ",";
+        }
+
+        const AntennaConnectorInterface::OpenMVMLBlob& blob = mlData.blobs[i];
+        json += "{";
+        json += "\"cx\":";
+        json += blob.cx;
+        json += ",\"cy\":";
+        json += blob.cy;
+        json += ",\"pixels\":";
+        json += blob.pixels;
+        json += ",\"ellipse\":";
+
+        if (!blob.hasEllipse) {
+            json += "null";
+        } else {
+            json += "{";
+            json += "\"cx\":";
+            json += blob.ellipseCx;
+            json += ",\"cy\":";
+            json += blob.ellipseCy;
+            json += ",\"rx\":";
+            json += blob.ellipseRx;
+            json += ",\"ry\":";
+            json += blob.ellipseRy;
+            json += ",\"rotation\":";
+            json += blob.ellipseRotation;
+            json += "}";
+        }
+
+        json += "}";
+    }
+
+    json += "]}";
 }
