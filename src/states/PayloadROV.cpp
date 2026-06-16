@@ -3,14 +3,12 @@
 #include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 #include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
-#include <SoftwareSerial.h>
 
 extern AntennaConnectorInterface antennaConnector;
 extern AntennaSerialTransmitter antennaSerialTransmitter;
 extern ScrewDriveInterface screwDrive;
 extern OpenMVReceiver openMVReceiver;
 extern HardwareSerial CAMERA_SERIAL; // not available on real wiring layout
-extern SoftwareSerial SOFT_CAM_SERIAL;
 
 static constexpr bool ENABLE_OPENMV_RAW_MONITOR = false;
 static constexpr bool ENABLE_OPENMV_RAW_MONITOR_STATUS = false;
@@ -187,8 +185,8 @@ void handleOpenMVRawMonitor() {
         }
     }
 
-    while (SOFT_CAM_SERIAL.available() > 0) {
-        Serial.write(static_cast<uint8_t>(SOFT_CAM_SERIAL.read()));
+    while (CAMERA_SERIAL.available() > 0) {
+        Serial.write(static_cast<uint8_t>(CAMERA_SERIAL.read()));
         totalBytesSeen++;
         bytesThisLoop++;
     }
@@ -267,8 +265,6 @@ void *payloadROVInit(StateData const *data) {
     // set up the antenna serial transmitter and OpenMV receiver input stream
     CAMERA_SERIAL.begin(115200);
     // pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
-    // SOFT_CAM_SERIAL.begin(10600);
-    // SOFT_CAM_SERIAL.listen();
     openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
     if (ENABLE_OPENMV_RAW_MONITOR && ENABLE_OPENMV_RAW_MONITOR_STATUS) {
