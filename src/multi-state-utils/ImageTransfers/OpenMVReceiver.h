@@ -40,6 +40,7 @@ class OpenMVReceiver {
 
         void handleTransmissionStart(String& receivedData);
         void handleTransmissionEnd(String& receivedData);
+        void resetIncomingTransmission();
         int expectedBase64Chars(int decodedByteCount);
 
         void handleTransmission(String& receivedData, String& queueLoc, int& byteCount);
@@ -54,6 +55,9 @@ class OpenMVReceiver {
         String streamLineBuffer = "";
         
         const static uint8_t maxQueueSize = 1;
+        const static int maxLineLength = 512;
+        const static int maxImageByteCount = 16384;
+        const static int maxBase64CharCount = 4 * ((maxImageByteCount + 2) / 3);
         String imageQueue[maxQueueSize];
         int imageSizes[maxQueueSize] = {};
         uint8_t currentQueueSize = 0;

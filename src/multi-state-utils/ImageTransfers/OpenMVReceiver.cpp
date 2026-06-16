@@ -5,11 +5,13 @@
 OpenMVReceiver::OpenMVReceiver(Stream* inputStream) :
     inputStream(inputStream)
 {
+    streamLineBuffer.reserve(maxLineLength);
 }
 
 void OpenMVReceiver::setInputStream(Stream* inputStream) {
     this->inputStream = inputStream;
     streamLineBuffer = "";
+    streamLineBuffer.reserve(maxLineLength);
 }
 
 bool OpenMVReceiver::runReceiver() {
@@ -99,6 +101,14 @@ bool OpenMVReceiver::receiveData(String& outData, int& outByteCount) {
         }
 
         streamLineBuffer += nextChar;
+
+        if(streamLineBuffer.length() > maxLineLength) {
+            Serial.print("DBG_OPENMV_RX_DROP reason=line_overflow length=");
+            Serial.println(streamLineBuffer.length());
+            streamLineBuffer = "";
+            resetIncomingTransmission();
+            return false;
+        }
     }
 
     return false;
@@ -117,8 +127,18 @@ bool OpenMVReceiver::checkForDiagnosticLine(const String& receivedData) {
 }
 
 void OpenMVReceiver::handleTransmissionStart(String& receivedData) {
-    receiving = true;
-    incomingExpectedByteCount = parseExpectedByteCount(receivedData);
+    resetIncomingTransmission();
+
+    int expectedByteCount = parseExpectedByteCount(receivedData);
+
+    if(expectedByteCount <= 0 || expectedByteCount > maxImageByteCount) {
+        Serial.print("DBG_OPENMV_RX_DROP reason=invalid_byte_count bytes=");
+        Serial.println(expectedByteCount);
+        receivedData = "";
+        return;
+    }
+
+    incomingExpectedByteCount = expectedByteCount;
     incomingBase64CharCount = 0;
     incomingChunkCount = 0;
 
@@ -126,6 +146,11 @@ void OpenMVReceiver::handleTransmissionStart(String& receivedData) {
     receivedData = "";
 
     makeRoomForNextImage();
+    uint8_t queueLoc = currentQueueSize % maxQueueSize;
+    imageQueue[queueLoc] = "";
+    imageQueue[queueLoc].reserve(expectedBase64Chars(incomingExpectedByteCount));
+    imageSizes[queueLoc] = 0;
+    receiving = true;
 }
 
 int OpenMVReceiver::parseExpectedByteCount(const String& receivedData) {
@@ -160,11 +185,25 @@ void OpenMVReceiver::makeRoomForNextImage() {
 }
 
 void OpenMVReceiver::handleTransmissionEnd(String& receivedData) {
+    if(!receiving) {
+        receivedData = "";
+        return;
+    }
+
     receiving = false;
 
     receivedData.replace("IMG_END", "");
 
     int expectedChars = expectedBase64Chars(incomingExpectedByteCount);
+
+    if(incomingBase64CharCount > maxBase64CharCount || (expectedChars > 0 && incomingBase64CharCount != expectedChars)) {
+        Serial.print("DBG_OPENMV_RX_DROP reason=end_size_mismatch base64_chars=");
+        Serial.print(incomingBase64CharCount);
+        Serial.print(" expected_base64_chars=");
+        Serial.println(expectedChars);
+        resetIncomingTransmission();
+        return;
+    }
 
     // Serial.print("DBG_MARS_CAMERA_END expected_jpeg_bytes=");
     // Serial.print(incomingExpectedByteCount);
@@ -183,15 +222,44 @@ void OpenMVReceiver::handleTransmissionEnd(String& receivedData) {
 
     currentQueueSize++;
     incomingExpectedByteCount = 0;
+    incomingBase64CharCount = 0;
+    incomingChunkCount = 0;
 }
 
 void OpenMVReceiver::handleTransmission(String& receivedData, String& queueLoc, int& byteCount) {
     if(receivedData.length() == 0) {
         return;
     }
+
+    int nextBase64CharCount = incomingBase64CharCount + receivedData.length();
+    int expectedChars = expectedBase64Chars(incomingExpectedByteCount);
+
+    if(nextBase64CharCount > maxBase64CharCount || (expectedChars > 0 && nextBase64CharCount > expectedChars)) {
+        Serial.print("DBG_OPENMV_RX_DROP reason=base64_overflow next_base64_chars=");
+        Serial.print(nextBase64CharCount);
+        Serial.print(" expected_base64_chars=");
+        Serial.println(expectedChars);
+        resetIncomingTransmission();
+        receivedData = "";
+        return;
+    }
     
     queueLoc += receivedData;
     byteCount += receivedData.length();
-    incomingBase64CharCount += receivedData.length();
+    incomingBase64CharCount = nextBase64CharCount;
     incomingChunkCount++;
+}
+
+void OpenMVReceiver::resetIncomingTransmission() {
+    bool wasReceiving = receiving;
+    receiving = false;
+    incomingExpectedByteCount = 0;
+    incomingBase64CharCount = 0;
+    incomingChunkCount = 0;
+
+    if(wasReceiving || currentQueueSize == 0) {
+        uint8_t queueLoc = currentQueueSize % maxQueueSize;
+        imageQueue[queueLoc] = "";
+        imageSizes[queueLoc] = 0;
+    }
 }
