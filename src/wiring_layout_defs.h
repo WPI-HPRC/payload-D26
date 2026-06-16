@@ -40,7 +40,7 @@
     #define RIGHT_SCREW_PWM PWM_OUT4
 
     #define LATCH_SERVO_PWM ADC_INP5
-    #define ANTENNA_SERVO_PWM CAMERA_MISO // this is wrong but just to compile (needs to be PE6 eventually but not in table)
+    #define ANTENNA_SERVO_PWM PE6 // this is wrong but just to compile (needs to be PE6 eventually but not in table)
 
     #define SELF_RIGHTING_PWM1 ADC_INP3
     #define SELF_RIGHTING_PWM2 ADC_INN3

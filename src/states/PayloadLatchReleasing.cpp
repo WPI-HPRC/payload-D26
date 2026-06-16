@@ -1,7 +1,7 @@
 #include "../State.h"
 #include "../Context.h"
 
-#define LATCH_RELEASE_DURATION_MS 4000 // Duration to simulate latch release in milliseconds
+#define LATCH_RELEASE_DURATION_MS 1000 // Duration to simulate latch release in milliseconds
 #define LATCH_DOWN_MICROSECONDS 1000 // Microseconds to write to the servo for latch down position
 #define LATCH_UP_MICROSECONDS 2000 // Microseconds to write to the servo for latch up position
 
