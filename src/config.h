@@ -6,6 +6,16 @@
 // XXX: This must be set to 0 before launch!!
 #define DEBUG_MODE 1
 
+// Debug-only ESC neutral calibration mode for the screw drive.
+// When enabled, screw-drive arming holds neutral indefinitely and accepts
+// serial commands to tune the neutral pulse. Must be disabled for flight.
+#define ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG 1
+
+// Debug-only self-righting servo calibration mode.
+// When enabled, PAYLOAD_SELF_RIGHTING stays in a serial-driven tuning loop.
+// Must be disabled for flight.
+#define ENABLE_SELF_RIGHTING_SERVO_TUNING_DEBUG 0
+
 // If defined, replaces sensors with mock version
 // XXX: This line must be commented out before launch (potentially also during testing)!!
 // #define MOCK_SENSORS

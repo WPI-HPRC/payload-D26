@@ -4,7 +4,7 @@
 
 static constexpr float DEPLOY_SPEED = 0.35f;
 static constexpr float DEPLOY_TURN_CORRECTION = 0.0f;
-static constexpr uint32_t DEPLOYMENT_DURATION_MS = 1000; // Duration to simulate deployment in milliseconds
+static constexpr uint32_t DEPLOYMENT_DURATION_MS = 100000000; // Duration to simulate deployment in milliseconds
 
 extern ScrewDriveInterface screwDrive;
 extern VoltageSensorInterface voltageSensor;
@@ -61,7 +61,11 @@ void handleDriveOut(StateData const *data) {
 void *payloadDeployingInit(StateData const *data) {
     Serial.println("Entered Payload Deploying State...");
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
+#if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG
+    screwDrive.beginNeutralArmCalibration(&Serial);
+#else
     screwDrive.beginArm();
+#endif
     voltageSensor.resetVoltageDropReference();
 
     return nullptr;
@@ -69,16 +73,25 @@ void *payloadDeployingInit(StateData const *data) {
 
 StateID payloadDeployingLoop(StateData const *data, Context *ctx, void *_localData) {
 
-    // check if ESCs are armed and if so drive out slowly
-    if (screwDrive.updateArm()) {
-        handleDriveOut(data);
-    }
-
     String input = "";
 
     if(Serial.available()) {
         input = Serial.readStringUntil('\n');
         input.trim();
+    }
+
+#if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG
+    bool armed = screwDrive.updateNeutralArmCalibration(input);
+    if (screwDrive.isNeutralArmCalibrationActive()) {
+        return PAYLOAD_DEPLOYING;
+    }
+#else
+    bool armed = screwDrive.updateArm();
+#endif
+
+    // check if ESCs are armed and if so drive out slowly
+    if (armed) {
+        handleDriveOut(data);
     }
 
     if (checkDeploymentComplete(input, data)) {

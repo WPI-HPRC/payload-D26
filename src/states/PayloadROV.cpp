@@ -59,6 +59,13 @@ void handleRovSerialInput() {
         return;
     }
 
+#if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG
+    if (screwDrive.isNeutralArmCalibrationActive()) {
+        screwDrive.updateNeutralArmCalibration(input);
+        return;
+    }
+#endif
+
     if(input.startsWith("{")) {
         bool handled = antennaSerialTransmitter.handleIncomingPacket(input);
         (void)handled;
@@ -226,7 +233,11 @@ void handleOpenMVRawMonitor() {
  */
 void driveBehavior() {
     AntennaConnectorInterface::DriveData driveData = antennaConnector.getDriveData();
+#if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG
+    bool armed = screwDrive.updateNeutralArmCalibration();
+#else
     bool armed = screwDrive.updateArm();
+#endif
 
     if (armed) {
         screwDrive.drive(driveData.speed, driveData.turn);
@@ -262,7 +273,11 @@ void *payloadROVInit(StateData const *data) {
 
     // attach the screw drive and start the arming process immediately so it's ready to go by the time we get drive commands
     screwDrive.attach(LEFT_SCREW_PWM, RIGHT_SCREW_PWM);
+#if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG
+    screwDrive.beginNeutralArmCalibration(&Serial);
+#else
     screwDrive.beginArm();
+#endif
 
     // set up the antenna serial transmitter and OpenMV receiver input stream
     CAMERA_SERIAL.begin(115200);

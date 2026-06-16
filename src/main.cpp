@@ -339,7 +339,7 @@ void setup() {
   pinMode(ADC_INP4, INPUT);
   digitalWrite(MOSFET_GATE, HIGH);
 
-  ctx.currentState = PAYLOAD_DEPLOYED;
+  ctx.currentState = PAYLOAD_SELF_RIGHTING;
   data = {};
 
   initStateMap();

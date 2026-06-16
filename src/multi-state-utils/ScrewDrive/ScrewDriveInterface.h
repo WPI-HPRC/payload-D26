@@ -56,15 +56,38 @@ class ScrewDriveInterface {
     void beginArm(uint32_t armingDurationMs = 1000);
 
     /**
+     * Start debug neutral calibration for ESC arming. This keeps commanding the
+     * current neutral pulse until updateNeutralArmCalibration() receives an
+     * "armed" command over the caller-provided serial input.
+     */
+    void beginNeutralArmCalibration(Stream* debugOutput = &Serial,
+                                    uint16_t stepUs = 5,
+                                    uint16_t minNeutralUs = 1000,
+                                    uint16_t maxNeutralUs = 2000);
+
+    /**
      * Continue the non-blocking arming period. This keeps commanding neutral and
      * returns true once the configured arming time has elapsed.
      */
     bool updateArm();
 
     /**
+     * Continue debug neutral calibration. Valid input commands are:
+     * +, -, ++, --, inc, dec, neutral <us>, n <us>, step <us>, status, armed.
+     * Returns true only after the "armed" command is received.
+     */
+    bool updateNeutralArmCalibration(const String& input = "");
+
+    /**
      * Return true once the most recent non-blocking arming period has completed.
      */
     bool isArmed() const;
+
+    /**
+     * Return true while debug neutral calibration is waiting for an "armed"
+     * serial command.
+     */
+    bool isNeutralArmCalibrationActive() const;
 
     /**
      * Command neutral effort to both ESCs immediately.
@@ -141,9 +164,17 @@ class ScrewDriveInterface {
     bool arming = false;
     uint32_t armStartedAt = 0;
     uint32_t armDurationMs = 0;
+    bool neutralArmCalibrationActive = false;
+    uint16_t neutralArmStepUs = 5;
+    uint16_t neutralArmMinUs = 1000;
+    uint16_t neutralArmMaxUs = 2000;
+    Stream* neutralArmDebugOutput = nullptr;
 
     float clampUnit(float value) const;
     float applyOutputScaling(float effort, float correction, bool inverted) const;
     uint16_t effortToPulseUs(float effort) const;
     void writeEfforts(float leftEffort, float rightEffort);
+    void setNeutralPulseConstrained(uint16_t pulseUs);
+    void printNeutralArmCalibrationHelp() const;
+    void printNeutralArmCalibrationPulse() const;
 };

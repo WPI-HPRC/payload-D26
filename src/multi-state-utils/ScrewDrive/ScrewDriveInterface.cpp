@@ -12,6 +12,7 @@ void ScrewDriveInterface::attach(int leftPin, int rightPin) {
 void ScrewDriveInterface::detach() {
     armed = false;
     arming = false;
+    neutralArmCalibrationActive = false;
     leftEsc.detach();
     rightEsc.detach();
     attached = false;
@@ -20,9 +21,29 @@ void ScrewDriveInterface::detach() {
 void ScrewDriveInterface::beginArm(uint32_t armingDurationMs) {
     armed = false;
     arming = true;
+    neutralArmCalibrationActive = false;
     armStartedAt = millis();
     armDurationMs = armingDurationMs;
     stop();
+}
+
+void ScrewDriveInterface::beginNeutralArmCalibration(Stream* debugOutput,
+                                                     uint16_t stepUs,
+                                                     uint16_t minNeutralUs,
+                                                     uint16_t maxNeutralUs) {
+    neutralArmDebugOutput = debugOutput;
+    neutralArmStepUs = max<uint16_t>(1, stepUs);
+    neutralArmMinUs = min(minNeutralUs, maxNeutralUs);
+    neutralArmMaxUs = max(minNeutralUs, maxNeutralUs);
+
+    armed = false;
+    arming = true;
+    neutralArmCalibrationActive = true;
+    setNeutralPulseConstrained(neutralPulseUs);
+    stop();
+
+    printNeutralArmCalibrationHelp();
+    printNeutralArmCalibrationPulse();
 }
 
 bool ScrewDriveInterface::updateArm() {
@@ -45,8 +66,119 @@ bool ScrewDriveInterface::updateArm() {
     return false;
 }
 
+bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
+    if (armed) {
+        return true;
+    }
+
+    if (!neutralArmCalibrationActive) {
+        return updateArm();
+    }
+
+    stop();
+
+    String command = input;
+    command.trim();
+    command.toLowerCase();
+
+    if (command.length() == 0) {
+        return false;
+    }
+
+    if (command == "armed" || command == "arm" || command == "done") {
+        neutralArmCalibrationActive = false;
+        arming = false;
+        armed = true;
+        stop();
+
+        if (neutralArmDebugOutput != nullptr) {
+            neutralArmDebugOutput->print("ESC neutral calibration accepted. Armed at ");
+            neutralArmDebugOutput->print(neutralPulseUs);
+            neutralArmDebugOutput->println(" us.");
+        }
+
+        return true;
+    }
+
+    if (command == "status" || command == "?") {
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command == "help") {
+        printNeutralArmCalibrationHelp();
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command == "+" || command == "inc" || command == "increase") {
+        setNeutralPulseConstrained(neutralPulseUs + neutralArmStepUs);
+        stop();
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command == "++") {
+        setNeutralPulseConstrained(neutralPulseUs + (neutralArmStepUs * 10));
+        stop();
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command == "-" || command == "dec" || command == "decrease") {
+        setNeutralPulseConstrained(neutralPulseUs - min(neutralPulseUs, neutralArmStepUs));
+        stop();
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command == "--") {
+        uint16_t delta = min<uint16_t>(neutralPulseUs, neutralArmStepUs * 10);
+        setNeutralPulseConstrained(neutralPulseUs - delta);
+        stop();
+        printNeutralArmCalibrationPulse();
+        return false;
+    }
+
+    if (command.startsWith("neutral ") || command.startsWith("n ")) {
+        int spaceIndex = command.indexOf(' ');
+        int pulse = command.substring(spaceIndex + 1).toInt();
+        if (pulse > 0) {
+            setNeutralPulseConstrained(static_cast<uint16_t>(pulse));
+            stop();
+            printNeutralArmCalibrationPulse();
+        }
+        return false;
+    }
+
+    if (command.startsWith("step ")) {
+        int step = command.substring(command.indexOf(' ') + 1).toInt();
+        if (step > 0) {
+            neutralArmStepUs = static_cast<uint16_t>(step);
+            if (neutralArmDebugOutput != nullptr) {
+                neutralArmDebugOutput->print("ESC neutral calibration step: ");
+                neutralArmDebugOutput->print(neutralArmStepUs);
+                neutralArmDebugOutput->println(" us.");
+            }
+        }
+        return false;
+    }
+
+    if (neutralArmDebugOutput != nullptr) {
+        neutralArmDebugOutput->print("Unknown ESC neutral calibration command: ");
+        neutralArmDebugOutput->println(command);
+        printNeutralArmCalibrationHelp();
+    }
+
+    return false;
+}
+
 bool ScrewDriveInterface::isArmed() const {
     return armed;
+}
+
+bool ScrewDriveInterface::isNeutralArmCalibrationActive() const {
+    return neutralArmCalibrationActive;
 }
 
 void ScrewDriveInterface::stop() {
@@ -153,4 +285,27 @@ void ScrewDriveInterface::writeEfforts(float leftEffort, float rightEffort) {
 
     leftEsc.writeMicroseconds(lastLeftPulseUs);
     rightEsc.writeMicroseconds(lastRightPulseUs);
+}
+
+void ScrewDriveInterface::setNeutralPulseConstrained(uint16_t pulseUs) {
+    neutralPulseUs = constrain(pulseUs, neutralArmMinUs, neutralArmMaxUs);
+}
+
+void ScrewDriveInterface::printNeutralArmCalibrationHelp() const {
+    if (neutralArmDebugOutput == nullptr) {
+        return;
+    }
+
+    neutralArmDebugOutput->println("ESC neutral calibration active.");
+    neutralArmDebugOutput->println("Commands: +, -, ++, --, neutral <us>, n <us>, step <us>, status, armed.");
+}
+
+void ScrewDriveInterface::printNeutralArmCalibrationPulse() const {
+    if (neutralArmDebugOutput == nullptr) {
+        return;
+    }
+
+    neutralArmDebugOutput->print("ESC neutral calibration pulse: ");
+    neutralArmDebugOutput->print(neutralPulseUs);
+    neutralArmDebugOutput->println(" us.");
 }

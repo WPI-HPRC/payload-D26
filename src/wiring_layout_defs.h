@@ -43,5 +43,5 @@
     #define ANTENNA_SERVO_PWM PE6 // this is wrong but just to compile (needs to be PE6 eventually but not in table)
 
     #define SELF_RIGHTING_PWM1 ADC_INP3
-    #define SELF_RIGHTING_PWM2 ADC_INN3
+    #define SELF_RIGHTING_PWM2 ADC_INN5
 #endif
