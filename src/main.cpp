@@ -8,8 +8,6 @@
   #error "No variant specified. Please define ARDUINO_MARSv20 or ARDUINO_MARSv21"
 #endif
 
-
-#include "variant_MARSV20.h"
 #include <Arduino.h>
 
 #include <HardwareSerial.h>
@@ -30,14 +28,14 @@
 #include "multi-state-utils/AntennaConnector/AntennaConnectorInterface.h"
 #include "multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
+#include "multi-state-utils/VoltageSensor/VoltageSensorInterface.h"
 #include <Servo.h>
 #include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
-#include <SoftwareSerial.h>
-
 #include "LoRaE22.h"
 #include "RadioConfig.h"
 
 #define OUTPUT_SENSOR_DATA false
+static constexpr bool ENABLE_VOLTAGE_SENSOR_DEBUG = false;
 
 
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
@@ -50,10 +48,7 @@ HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 AntennaConnectorInterface antennaConnector;
 AntennaSerialTransmitter antennaSerialTransmitter(&Serial, &antennaConnector);
 ScrewDriveInterface screwDrive;
-
-
-// alternate solution to repining conflict
-SoftwareSerial SOFT_CAM_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
+VoltageSensorInterface voltageSensor(ADC_INP4, ADC_INN4);
 
 OpenMVReceiver openMVReceiver(&CAMERA_SERIAL);
 
@@ -342,7 +337,7 @@ void setup() {
   pinMode(ADC_INP4, INPUT);
   digitalWrite(MOSFET_GATE, HIGH);
 
-  ctx.currentState = PAYLOAD_SELF_RIGHTING;
+  ctx.currentState = PAYLOAD_DEPLOYED;
   data = {};
 
   initStateMap();
@@ -354,6 +349,9 @@ void setup() {
   digitalWrite(LED_RED, HIGH);
 
   Serial.begin(115200);
+  voltageSensor.begin();
+  voltageSensor.setDebugOutput(&Serial);
+  voltageSensor.setDebugEnabled(ENABLE_VOLTAGE_SENSOR_DEBUG);
   // radioInit();
 
   delay(200);
@@ -474,6 +472,7 @@ void loop() {
   }
 
   sensorLoop();
+  voltageSensor.poll();
 
   // radioLoop();
 
