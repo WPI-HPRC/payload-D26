@@ -2,17 +2,22 @@ import binascii
 import csi
 import gc
 import time
+import machine
 from machine import UART
+from machine import LED
 
 
 UART_BUS = 1
-BAUDRATE = 10600
-CHUNK_SIZE = 48
-INTER_LINE_DELAY_MS = 2
+BAUDRATE = 115200
+CHUNK_SIZE = 64
+INTER_LINE_DELAY_MS = 0
 FRAME_INTERVAL_MS = 0
 
 FRAME_SIZE = csi.QQQVGA
 JPEG_QUALITY = 50
+RUN_LED = LED("LED_GREEN")
+RUN_LED_BLINK_PERIOD_MS = 1000
+RUN_LED_ON_TIME_MS = 50
 
 
 def setup_camera():
@@ -22,6 +27,9 @@ def setup_camera():
     pixformat = getattr(csi, "GRAYSCALE", csi.RGB565)
     cam.pixformat(pixformat)
     cam.framesize(FRAME_SIZE)
+    cam.hmirror(False)
+    cam.vflip(True)
+    cam.transpose(True)
 
     if hasattr(cam, "quality"):
         cam.quality(JPEG_QUALITY)
@@ -59,12 +67,20 @@ def write_base64_lines(uart, image_bytes):
     #     "DBG_OPENMV_END jpeg_bytes=%d base64_chars=%d chunks=%d chunk_size=%d baud=%d\n"
     #     % (len(image_bytes), len(encoded), chunks, CHUNK_SIZE, BAUDRATE)
     # )
+def blink_to_show_running():
+    if time.ticks_ms() % RUN_LED_BLINK_PERIOD_MS < RUN_LED_ON_TIME_MS:
+        RUN_LED.on()
+    else:
+        RUN_LED.off()
 
 
 camera = setup_camera()
 uart = UART(UART_BUS, baudrate=BAUDRATE)
 
 while True:
+
+    blink_to_show_running()
+
     try:
         jpeg_bytes = compressed_jpeg_bytes(camera)
         write_base64_lines(uart, jpeg_bytes)
