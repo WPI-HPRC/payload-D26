@@ -10,7 +10,7 @@ extern AntennaSerialTransmitter antennaSerialTransmitter;
 extern ScrewDriveInterface screwDrive;
 extern OpenMVReceiver openMVReceiver;
 extern HardwareSerial CAMERA_SERIAL; // not available on real wiring layout
-extern VoltageSensorInterface voltageSensor;
+// extern VoltageSensorInterface voltageSensor;
 
 static constexpr bool ENABLE_OPENMV_RAW_MONITOR = false;
 static constexpr bool ENABLE_OPENMV_RAW_MONITOR_STATUS = false;
@@ -296,7 +296,7 @@ void *payloadROVInit(StateData const *data) {
     // for local connection (no antenna) setup the serial antenna/debug transmitter
     antennaSerialTransmitter.setOutputStream(&Serial);
     antennaSerialTransmitter.setAntennaConnector(&antennaConnector);
-    voltageSensor.setAntennaConnector(&antennaConnector);
+    // voltageSensor.setAntennaConnector(&antennaConnector);
 
     // antenna setup can go here
 

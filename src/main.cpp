@@ -50,7 +50,7 @@ HardwareSerial CAMERA_SERIAL(CAMERA_SERIAL_RX, CAMERA_SERIAL_TX);
 AntennaConnectorInterface antennaConnector;
 AntennaSerialTransmitter antennaSerialTransmitter(&Serial, &antennaConnector);
 ScrewDriveInterface screwDrive;
-VoltageSensorInterface voltageSensor(ADC_INP4, ADC_INN4);
+// VoltageSensorInterface voltageSensor(ADC_INP4, ADC_INN4);
 
 OpenMVReceiver openMVReceiver(&CAMERA_SERIAL);
 
@@ -339,7 +339,7 @@ void setup() {
   pinMode(ADC_INP4, INPUT);
   digitalWrite(MOSFET_GATE, HIGH);
 
-  ctx.currentState = PAYLOAD_ROV;
+  ctx.currentState = PAYLOAD_DEPLOYING;
   data = {};
 
   initStateMap();
@@ -351,11 +351,11 @@ void setup() {
   digitalWrite(LED_RED, HIGH);
 
   Serial.begin(115200);
-  voltageSensor.begin();
-  voltageSensor.setVoltageDropThreshold(VOLTAGE_DROP_FAILURE_THRESHOLD);
-  voltageSensor.setZeroVoltageThreshold(VOLTAGE_SENSOR_ZERO_THRESHOLD);
-  voltageSensor.setDebugOutput(&Serial);
-  voltageSensor.setDebugEnabled(ENABLE_VOLTAGE_SENSOR_DEBUG);
+  // voltageSensor.begin();
+  // voltageSensor.setVoltageDropThreshold(VOLTAGE_DROP_FAILURE_THRESHOLD);
+  // voltageSensor.setZeroVoltageThreshold(VOLTAGE_SENSOR_ZERO_THRESHOLD);
+  // voltageSensor.setDebugOutput(&Serial);
+  // voltageSensor.setDebugEnabled(ENABLE_VOLTAGE_SENSOR_DEBUG);
   // radioInit();
 
   delay(200);
@@ -476,7 +476,7 @@ void loop() {
   }
 
   sensorLoop();
-  voltageSensor.poll();
+  // voltageSensor.poll();
 
   // radioLoop();
 

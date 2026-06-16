@@ -36,8 +36,8 @@
     #define CAMERA_SERIAL_TX PA0
 
     // screw drive pins
-    #define LEFT_SCREW_PWM PWM_OUT3
-    #define RIGHT_SCREW_PWM PWM_OUT4
+    #define LEFT_SCREW_PWM ADC_INP4
+    #define RIGHT_SCREW_PWM PWM_OUT6
 
     #define LATCH_SERVO_PWM ADC_INP5
     #define ANTENNA_SERVO_PWM PE6 // this is wrong but just to compile (needs to be PE6 eventually but not in table)
