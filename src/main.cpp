@@ -356,10 +356,6 @@ void setup() {
   Serial.begin(115200);
   // radioInit();
 
-  while (!Serial) {
-    delay(10);
-  }
-
   delay(200);
 
   ctx.ekfLooping = false;
