@@ -11,7 +11,7 @@ image_path = project_root / "images" / "test-transfers" / "150.jpg"
 PORT = "COM22"
 # PORT = "/dev/ttyUSB0"  # Linux
 # PORT = "/dev/cu.usbserial-XXXX"  # macOS
-BAUD = 115200
+BAUD = 230400
 
 with open(image_path, "rb") as f:
     raw = f.read()

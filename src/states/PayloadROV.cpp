@@ -285,7 +285,7 @@ void *payloadROVInit(StateData const *data) {
     openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
     if (ENABLE_OPENMV_RAW_MONITOR && ENABLE_OPENMV_RAW_MONITOR_STATUS) {
-        Serial.print("DBG_OPENMV_RAW_MONITOR_READY baud=57600 rx_pin=");
+        Serial.print("DBG_OPENMV_RAW_MONITOR_READY baud=115200 rx_pin=");
         Serial.print(CAMERA_SERIAL_RX);
         Serial.print(" tx_pin=");
         Serial.print(CAMERA_SERIAL_TX);
