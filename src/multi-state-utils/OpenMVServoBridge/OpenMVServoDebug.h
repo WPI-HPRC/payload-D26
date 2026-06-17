@@ -5,6 +5,6 @@
 class ScrewDriveInterface;
 
 bool handleOpenMVServoDebugCommand(const String& input,
-                                   Stream& cameraOutput,
+                                   HardwareSerial& cameraSerial,
                                    ScrewDriveInterface& screwDrive,
                                    Stream& debugOutput);

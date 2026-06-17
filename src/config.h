@@ -18,6 +18,9 @@
 // Enable local USB serial commands for OpenMV servo UART bring-up.
 #define ENABLE_OPENMV_SERVO_UART_DEBUG 1
 
+// Default UART baud rate for the MARS <-> OpenMV camera link.
+#define CAMERA_SERIAL_BAUD 115200
+
 // Debug-only self-righting servo calibration mode.
 // When enabled, PAYLOAD_SELF_RIGHTING stays in a serial-driven tuning loop.
 // Must be disabled for flight.

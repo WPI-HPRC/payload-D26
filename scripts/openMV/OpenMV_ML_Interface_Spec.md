@@ -226,3 +226,41 @@ When ML data is available:
 
 If OpenMV reports more than `OPENMV_ML_MAX_BLOBS`, MARS stores the first 16
 blob slots and sends `"droppedBlobs": true`.
+
+## Application Serial Input
+
+The PC-side serial helpers consume one newline-delimited message at a time.
+They support two input modes:
+
+- Raw OpenMV image mode: `IMG_BEGIN`, base64 lines, `IMG_END`. This remains
+  useful when connecting the PC directly to OpenMV.
+- MARS telemetry mode: one JSON object per line with
+  `"type":"roverTelemetry"`. This is the normal MARS-board-to-application feed.
+
+The shared parser is `scripts/mars_serial_feed.py`.
+
+Application-side image state:
+
+- `image_chunks`: `dict[int, str]`, stores JSON image chunks by `chunkIndex`.
+- `expected_chunk_count`: `int | None`, copied from `image.chunkCount`.
+- `expected_base64_length`: `int | None`, copied from `image.base64Length`.
+- `expected_byte_count`: `int`, copied from `image.byteCount`.
+
+When all chunks from `0` through `chunkCount - 1` have arrived and the final
+chunk has been seen, the app joins chunks in index order and decodes the JPEG.
+
+Application-side ML state:
+
+- `latest_ml_frame_id`: `int | None`, used to avoid repeatedly printing the
+  same ML result on every telemetry packet.
+- The current ML payload is read directly from the telemetry JSON `ml` object.
+
+Example MARS-to-application image chunk packets:
+
+```json
+{"type":"roverTelemetry","connection":true,"sensors":{},"image":{"byteCount":3,"base64Length":4,"chunkIndex":0,"chunkCount":2,"final":false,"data":"QU"},"ml":{"frameId":1,"expectedBlobCount":1,"droppedBlobs":false,"horizon":{"valid":true,"yPx":77,"x1":0,"y1":77,"x2":159,"y2":79},"blobs":[{"cx":1,"cy":2,"pixels":3,"ellipse":null}]}}
+{"type":"roverTelemetry","connection":true,"sensors":{},"image":{"byteCount":3,"base64Length":4,"chunkIndex":1,"chunkCount":2,"final":true,"data":"JD"},"ml":{"frameId":1,"expectedBlobCount":1,"droppedBlobs":false,"horizon":{"valid":true,"yPx":77,"x1":0,"y1":77,"x2":159,"y2":79},"blobs":[{"cx":1,"cy":2,"pixels":3,"ellipse":null}]}}
+```
+
+The application assembles `QU` + `JD` into `QUJD`, decodes it, and treats the
+`ml` object as the latest available ML state.

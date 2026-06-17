@@ -5,6 +5,9 @@
 
 static constexpr uint16_t DEBUG_MIN_PULSE_US = 1000;
 static constexpr uint16_t DEBUG_MAX_PULSE_US = 2000;
+static constexpr uint32_t DEBUG_MIN_CAMERA_BAUD = 9600;
+static constexpr uint32_t DEBUG_MAX_CAMERA_BAUD = 2000000;
+static uint32_t currentCameraBaud = CAMERA_SERIAL_BAUD;
 
 static bool parsePulsePair(const String& input, uint16_t& leftPulseUs, uint16_t& rightPulseUs) {
     String args = input.substring(String("openmv_servo").length());
@@ -38,13 +41,42 @@ static void printOpenMVServoDebugTx(Stream& debugOutput, const char* command) {
     debugOutput.println(command);
 }
 
+static bool parseCameraBaud(const String& input, uint32_t& baud) {
+    String args = input.substring(String("openmv_baud").length());
+    args.trim();
+
+    if (args.length() == 0) {
+        return false;
+    }
+
+    long parsedBaud = args.toInt();
+    if (parsedBaud < static_cast<long>(DEBUG_MIN_CAMERA_BAUD) ||
+        parsedBaud > static_cast<long>(DEBUG_MAX_CAMERA_BAUD)) {
+        return false;
+    }
+
+    baud = static_cast<uint32_t>(parsedBaud);
+    return true;
+}
+
+static void setCameraSerialBaud(HardwareSerial& cameraSerial, uint32_t baud, Stream& debugOutput) {
+    cameraSerial.flush();
+    cameraSerial.end();
+    delay(10);
+    cameraSerial.begin(baud);
+    currentCameraBaud = baud;
+
+    debugOutput.print("DBG_OPENMV_BAUD_SET baud=");
+    debugOutput.println(currentCameraBaud);
+}
+
 bool handleOpenMVServoDebugCommand(const String& input,
-                                   Stream& cameraOutput,
+                                   HardwareSerial& cameraSerial,
                                    ScrewDriveInterface& screwDrive,
                                    Stream& debugOutput) {
 #if !ENABLE_OPENMV_SERVO_UART_DEBUG
     (void)input;
-    (void)cameraOutput;
+    (void)cameraSerial;
     (void)screwDrive;
     (void)debugOutput;
     return false;
@@ -64,8 +96,8 @@ bool handleOpenMVServoDebugCommand(const String& input,
             token = String(millis());
         }
 
-        cameraOutput.print("PING_SERVO ");
-        cameraOutput.println(token);
+        cameraSerial.print("PING_SERVO ");
+        cameraSerial.println(token);
 
         debugOutput.print("DBG_OPENMV_SERVO_TX PING_SERVO token=");
         debugOutput.println(token);
@@ -81,10 +113,10 @@ bool handleOpenMVServoDebugCommand(const String& input,
             return true;
         }
 
-        cameraOutput.print("SERVO L ");
-        cameraOutput.print(leftPulseUs);
-        cameraOutput.print(" R ");
-        cameraOutput.println(rightPulseUs);
+        cameraSerial.print("SERVO L ");
+        cameraSerial.print(leftPulseUs);
+        cameraSerial.print(" R ");
+        cameraSerial.println(rightPulseUs);
 
         debugOutput.print("DBG_OPENMV_SERVO_TX SERVO L=");
         debugOutput.print(leftPulseUs);
@@ -94,7 +126,7 @@ bool handleOpenMVServoDebugCommand(const String& input,
     }
 
     if (input == "openmv_get_servo") {
-        cameraOutput.println("GET_SERVO");
+        cameraSerial.println("GET_SERVO");
         printOpenMVServoDebugTx(debugOutput, "GET_SERVO");
 
         debugOutput.print("DBG_OPENMV_SERVO_LOCAL leftPulseUs=");
@@ -103,6 +135,27 @@ bool handleOpenMVServoDebugCommand(const String& input,
         debugOutput.print(screwDrive.getLastRightPulseUs());
         debugOutput.print(" backend=");
         debugOutput.println(screwDrive.isUsingOpenMVUartOutput() ? "openmv_uart" : "direct_servo");
+        return true;
+    }
+
+    if (input.startsWith("openmv_baud")) {
+        uint32_t baud = 0;
+        if (!parseCameraBaud(input, baud)) {
+            debugOutput.print("DBG_OPENMV_BAUD_ERR reason=bad_baud min=");
+            debugOutput.print(DEBUG_MIN_CAMERA_BAUD);
+            debugOutput.print(" max=");
+            debugOutput.print(DEBUG_MAX_CAMERA_BAUD);
+            debugOutput.println(" expected=openmv_baud_<baud>");
+            return true;
+        }
+
+        setCameraSerialBaud(cameraSerial, baud, debugOutput);
+        return true;
+    }
+
+    if (input == "openmv_get_baud") {
+        debugOutput.print("DBG_OPENMV_BAUD baud=");
+        debugOutput.println(currentCameraBaud);
         return true;
     }
 

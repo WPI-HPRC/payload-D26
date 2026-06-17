@@ -6,6 +6,8 @@ from collections import deque
 
 import serial
 
+from mars_serial_feed import RoverTelemetryState
+
 try:
     import cv2
     import numpy as np
@@ -185,6 +187,19 @@ def handle_line(line, state, recorder: VideoRecorder):
         print(f"[BOARD] {line}")
         return
 
+    if line.startswith("{"):
+        if receiving:
+            print("[WARN] JSON telemetry received during raw IMG transfer; ignoring line")
+            return
+
+        telemetry_image = state["telemetry_state"].handle_line(line)
+        if telemetry_image is not None:
+            base64_text, telemetry_expected_bytes = telemetry_image
+            image_bytes = decode_frame(base64_text, telemetry_expected_bytes)
+            if image_bytes is not None:
+                recorder.add_jpeg_frame(image_bytes)
+        return
+
     if line.startswith("IMG_BEGIN"):
         print("[INFO] IMG_BEGIN received")
 
@@ -256,6 +271,7 @@ def main():
         "base64_chunks": [],
         "decoded_history": decoded_history,
         "last_progress_time": time.time(),
+        "telemetry_state": RoverTelemetryState(),
     }
 
     line_buffer = b""

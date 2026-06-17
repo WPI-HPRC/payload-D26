@@ -351,7 +351,7 @@ void setup() {
   digitalWrite(LED_RED, HIGH);
 
   Serial.begin(115200);
-  CAMERA_SERIAL.begin(115200);
+  CAMERA_SERIAL.begin(CAMERA_SERIAL_BAUD);
   openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
 #if ENABLE_SCREW_DRIVE_OPENMV_UART_OUTPUT

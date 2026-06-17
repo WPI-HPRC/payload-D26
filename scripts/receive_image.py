@@ -5,6 +5,8 @@ from pathlib import Path
 from datetime import datetime
 from collections import deque
 
+from mars_serial_feed import RoverTelemetryState
+
 # ---------------- CONFIG ----------------
 
 PORT = "COM22"
@@ -109,6 +111,17 @@ def handle_line(line, state):
         print(f"[BOARD] {line}")
         return
 
+    if line.startswith("{"):
+        if receiving:
+            print("[WARN] JSON telemetry received during raw IMG transfer; ignoring line")
+            return
+
+        telemetry_image = state["telemetry_state"].handle_line(line)
+        if telemetry_image is not None:
+            base64_text, telemetry_expected_bytes = telemetry_image
+            decode_and_write_image(base64_text, telemetry_expected_bytes)
+        return
+
     if line.startswith("IMG_BEGIN"):
         print("[INFO] IMG_BEGIN received")
 
@@ -182,6 +195,7 @@ def main():
         "base64_chunks": [],
         "decoded_history": decoded_history,
         "last_progress_time": time.time(),
+        "telemetry_state": RoverTelemetryState(),
     }
 
     line_buffer = b""
