@@ -3,6 +3,7 @@
 #include "../multi-state-utils/AntennaConnector/AntennaSerialTransmitter.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
 #include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
+#include "../multi-state-utils/OpenMVServoBridge/OpenMVServoDebug.h"
 #include "../multi-state-utils/VoltageSensor/VoltageSensorInterface.h"
 
 extern AntennaConnectorInterface antennaConnector;
@@ -56,6 +57,10 @@ void handleRovSerialInput() {
     input.trim();
 
     if(input.length() == 0) {
+        return;
+    }
+
+    if (handleOpenMVServoDebugCommand(input, CAMERA_SERIAL, screwDrive, Serial)) {
         return;
     }
 
@@ -279,9 +284,7 @@ void *payloadROVInit(StateData const *data) {
     screwDrive.beginArm();
 #endif
 
-    // set up the antenna serial transmitter and OpenMV receiver input stream
-    CAMERA_SERIAL.begin(115200);
-    // pinMode(CAMERA_SERIAL_RX, INPUT_PULLUP);
+    // CAMERA_SERIAL is started in setup() because deployment also uses it for ESC PWM bridging.
     openMVReceiver.setInputStream(&CAMERA_SERIAL);
 
     if (ENABLE_OPENMV_RAW_MONITOR && ENABLE_OPENMV_RAW_MONITOR_STATUS) {

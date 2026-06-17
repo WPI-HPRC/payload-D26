@@ -351,6 +351,15 @@ void setup() {
   digitalWrite(LED_RED, HIGH);
 
   Serial.begin(115200);
+  CAMERA_SERIAL.begin(115200);
+  openMVReceiver.setInputStream(&CAMERA_SERIAL);
+
+#if ENABLE_SCREW_DRIVE_OPENMV_UART_OUTPUT
+  screwDrive.useOpenMVUartOutput(&CAMERA_SERIAL);
+#else
+  screwDrive.useDirectServoOutput();
+#endif
+
   // voltageSensor.begin();
   // voltageSensor.setVoltageDropThreshold(VOLTAGE_DROP_FAILURE_THRESHOLD);
   // voltageSensor.setZeroVoltageThreshold(VOLTAGE_SENSOR_ZERO_THRESHOLD);

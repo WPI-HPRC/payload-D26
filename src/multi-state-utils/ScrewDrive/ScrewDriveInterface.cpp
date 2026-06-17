@@ -1,12 +1,53 @@
 #include "ScrewDriveInterface.h"
 
 void ScrewDriveInterface::attach(int leftPin, int rightPin) {
-    leftEsc.attach(leftPin);
-    rightEsc.attach(rightPin);
+    leftSignalPin = leftPin;
+    rightSignalPin = rightPin;
+
+    if (outputMode == SCREW_DRIVE_DIRECT_SERVO_PWM) {
+        leftEsc.attach(leftSignalPin);
+        rightEsc.attach(rightSignalPin);
+    } else {
+        leftEsc.detach();
+        rightEsc.detach();
+        forceNextOpenMVUartWrite();
+    }
+
     attached = true;
     armed = false;
     arming = false;
     stop();
+}
+
+void ScrewDriveInterface::useOpenMVUartOutput(Stream* output, uint32_t keepaliveMs) {
+    outputMode = SCREW_DRIVE_OPENMV_UART_PWM;
+    openMVUartOutput = output;
+    openMVUartKeepaliveMs = keepaliveMs;
+    hasSentOpenMVUartCommand = false;
+    forceNextOpenMVUartWrite();
+
+    if (attached) {
+        leftEsc.detach();
+        rightEsc.detach();
+        stop();
+    }
+}
+
+void ScrewDriveInterface::useDirectServoOutput() {
+    outputMode = SCREW_DRIVE_DIRECT_SERVO_PWM;
+    openMVUartOutput = nullptr;
+    hasSentOpenMVUartCommand = false;
+    forceOpenMVUartWrite = false;
+
+    if (attached && leftSignalPin >= 0 && rightSignalPin >= 0) {
+        leftEsc.attach(leftSignalPin);
+        rightEsc.attach(rightSignalPin);
+        stop();
+    }
+}
+
+bool ScrewDriveInterface::isUsingOpenMVUartOutput() const {
+    return outputMode == SCREW_DRIVE_OPENMV_UART_PWM;
 }
 
 void ScrewDriveInterface::detach() {
@@ -16,6 +57,7 @@ void ScrewDriveInterface::detach() {
     leftEsc.detach();
     rightEsc.detach();
     attached = false;
+    hasSentOpenMVUartCommand = false;
 }
 
 void ScrewDriveInterface::beginArm(uint32_t armingDurationMs) {
@@ -24,6 +66,7 @@ void ScrewDriveInterface::beginArm(uint32_t armingDurationMs) {
     neutralArmCalibrationActive = false;
     armStartedAt = millis();
     armDurationMs = armingDurationMs;
+    forceNextOpenMVUartWrite();
     stop();
 }
 
@@ -40,6 +83,7 @@ void ScrewDriveInterface::beginNeutralArmCalibration(Stream* debugOutput,
     arming = true;
     neutralArmCalibrationActive = true;
     setNeutralPulseConstrained(neutralPulseUs);
+    forceNextOpenMVUartWrite();
     stop();
 
     printNeutralArmCalibrationHelp();
@@ -89,6 +133,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
         neutralArmCalibrationActive = false;
         arming = false;
         armed = true;
+        forceNextOpenMVUartWrite();
         stop();
 
         if (neutralArmDebugOutput != nullptr) {
@@ -113,6 +158,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
 
     if (command == "+" || command == "inc" || command == "increase") {
         setNeutralPulseConstrained(neutralPulseUs + neutralArmStepUs);
+        forceNextOpenMVUartWrite();
         stop();
         printNeutralArmCalibrationPulse();
         return false;
@@ -120,6 +166,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
 
     if (command == "++") {
         setNeutralPulseConstrained(neutralPulseUs + (neutralArmStepUs * 10));
+        forceNextOpenMVUartWrite();
         stop();
         printNeutralArmCalibrationPulse();
         return false;
@@ -127,6 +174,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
 
     if (command == "-" || command == "dec" || command == "decrease") {
         setNeutralPulseConstrained(neutralPulseUs - min(neutralPulseUs, neutralArmStepUs));
+        forceNextOpenMVUartWrite();
         stop();
         printNeutralArmCalibrationPulse();
         return false;
@@ -135,6 +183,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
     if (command == "--") {
         uint16_t delta = min<uint16_t>(neutralPulseUs, neutralArmStepUs * 10);
         setNeutralPulseConstrained(neutralPulseUs - delta);
+        forceNextOpenMVUartWrite();
         stop();
         printNeutralArmCalibrationPulse();
         return false;
@@ -145,6 +194,7 @@ bool ScrewDriveInterface::updateNeutralArmCalibration(const String& input) {
         int pulse = command.substring(spaceIndex + 1).toInt();
         if (pulse > 0) {
             setNeutralPulseConstrained(static_cast<uint16_t>(pulse));
+            forceNextOpenMVUartWrite();
             stop();
             printNeutralArmCalibrationPulse();
         }
@@ -205,7 +255,9 @@ void ScrewDriveInterface::drive(float speed, float turn) {
             break;
     }
 
-    float maxMagnitude = max(abs(leftEffort), abs(rightEffort));
+    float leftMagnitude = leftEffort < 0.0f ? -leftEffort : leftEffort;
+    float rightMagnitude = rightEffort < 0.0f ? -rightEffort : rightEffort;
+    float maxMagnitude = max(leftMagnitude, rightMagnitude);
     if (maxMagnitude > 1.0f) {
         leftEffort /= maxMagnitude;
         rightEffort /= maxMagnitude;
@@ -283,8 +335,46 @@ void ScrewDriveInterface::writeEfforts(float leftEffort, float rightEffort) {
         return;
     }
 
+    if (outputMode == SCREW_DRIVE_OPENMV_UART_PWM) {
+        writeOpenMVUartCommand();
+        return;
+    }
+
     leftEsc.writeMicroseconds(lastLeftPulseUs);
     rightEsc.writeMicroseconds(lastRightPulseUs);
+}
+
+void ScrewDriveInterface::writeOpenMVUartCommand() {
+    if (openMVUartOutput == nullptr) {
+        return;
+    }
+
+    const uint32_t now = millis();
+    const bool pulsesChanged = !hasSentOpenMVUartCommand ||
+                               lastLeftPulseUs != lastOpenMVUartLeftPulseUs ||
+                               lastRightPulseUs != lastOpenMVUartRightPulseUs;
+    const bool keepaliveElapsed = hasSentOpenMVUartCommand &&
+                                  openMVUartKeepaliveMs > 0 &&
+                                  now - lastOpenMVUartCommandAt >= openMVUartKeepaliveMs;
+
+    if (!forceOpenMVUartWrite && !pulsesChanged && !keepaliveElapsed) {
+        return;
+    }
+
+    openMVUartOutput->print("SERVO L ");
+    openMVUartOutput->print(lastLeftPulseUs);
+    openMVUartOutput->print(" R ");
+    openMVUartOutput->println(lastRightPulseUs);
+
+    lastOpenMVUartLeftPulseUs = lastLeftPulseUs;
+    lastOpenMVUartRightPulseUs = lastRightPulseUs;
+    lastOpenMVUartCommandAt = now;
+    hasSentOpenMVUartCommand = true;
+    forceOpenMVUartWrite = false;
+}
+
+void ScrewDriveInterface::forceNextOpenMVUartWrite() {
+    forceOpenMVUartWrite = true;
 }
 
 void ScrewDriveInterface::setNeutralPulseConstrained(uint16_t pulseUs) {

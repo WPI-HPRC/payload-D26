@@ -1,5 +1,7 @@
 #include "../State.h"
 #include "../multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
+#include "../multi-state-utils/ImageTransfers/OpenMVReceiver.h"
+#include "../multi-state-utils/OpenMVServoBridge/OpenMVServoDebug.h"
 #include "../multi-state-utils/VoltageSensor/VoltageSensorInterface.h"
 
 static constexpr float DEPLOY_SPEED = 0.8f;
@@ -7,6 +9,8 @@ static constexpr float DEPLOY_TURN_CORRECTION = 0.0f;
 static constexpr uint32_t DEPLOYMENT_DURATION_MS = 100000000; // Duration to simulate deployment in milliseconds
 
 extern ScrewDriveInterface screwDrive;
+extern OpenMVReceiver openMVReceiver;
+extern HardwareSerial CAMERA_SERIAL;
 // extern VoltageSensorInterface voltageSensor;
 
 bool checkDeploymentComplete(String input, StateData const *data) {
@@ -78,6 +82,12 @@ StateID payloadDeployingLoop(StateData const *data, Context *ctx, void *_localDa
     if(Serial.available()) {
         input = Serial.readStringUntil('\n');
         input.trim();
+    }
+
+    openMVReceiver.runReceiver();
+
+    if (handleOpenMVServoDebugCommand(input, CAMERA_SERIAL, screwDrive, Serial)) {
+        input = "";
     }
 
 #if ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG

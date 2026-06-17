@@ -7,6 +7,11 @@ enum DriveControlStrategy {
     ARCADE
 };
 
+enum ScrewDriveOutputMode {
+    SCREW_DRIVE_DIRECT_SERVO_PWM,
+    SCREW_DRIVE_OPENMV_UART_PWM
+};
+
 class ScrewDriveInterface {
   public:
     /**
@@ -43,6 +48,21 @@ class ScrewDriveInterface {
      * Attach the left and right ESC signal pins and immediately command neutral.
      */
     void attach(int leftPin, int rightPin);
+
+    /**
+     * Route screw-drive output through OpenMV UART pulse-width commands.
+     */
+    void useOpenMVUartOutput(Stream* output, uint32_t keepaliveMs = 250);
+
+    /**
+     * Route screw-drive output directly through the MARS Servo pins.
+     */
+    void useDirectServoOutput();
+
+    /**
+     * Return true when screw-drive output is currently routed to OpenMV UART.
+     */
+    bool isUsingOpenMVUartOutput() const;
 
     /**
      * Detach both ESC Servo outputs. Call stop() before detach() when possible.
@@ -150,6 +170,16 @@ class ScrewDriveInterface {
     Servo leftEsc;
     Servo rightEsc;
 
+    ScrewDriveOutputMode outputMode = SCREW_DRIVE_DIRECT_SERVO_PWM;
+    Stream* openMVUartOutput = nullptr;
+    uint32_t openMVUartKeepaliveMs = 250;
+    uint32_t lastOpenMVUartCommandAt = 0;
+    uint16_t lastOpenMVUartLeftPulseUs = 0;
+    uint16_t lastOpenMVUartRightPulseUs = 0;
+    bool hasSentOpenMVUartCommand = false;
+    bool forceOpenMVUartWrite = false;
+    int leftSignalPin = -1;
+    int rightSignalPin = -1;
     DriveControlStrategy driveStrategy = ARCADE;
     float leftCorrection = 1.0f;
     float rightCorrection = 1.0f;
@@ -174,6 +204,8 @@ class ScrewDriveInterface {
     float applyOutputScaling(float effort, float correction, bool inverted) const;
     uint16_t effortToPulseUs(float effort) const;
     void writeEfforts(float leftEffort, float rightEffort);
+    void writeOpenMVUartCommand();
+    void forceNextOpenMVUartWrite();
     void setNeutralPulseConstrained(uint16_t pulseUs);
     void printNeutralArmCalibrationHelp() const;
     void printNeutralArmCalibrationPulse() const;

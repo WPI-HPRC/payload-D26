@@ -1,7 +1,26 @@
 #include <unity.h>
+#include <string>
 
 #include "multi-state-utils/ImageTransfers/OpenMVReceiver.h"
 #include "multi-state-utils/ImageTransfers/OpenMVReceiver.cpp"
+#include "multi-state-utils/ScrewDrive/ScrewDriveInterface.h"
+#include "multi-state-utils/ScrewDrive/ScrewDriveInterface.cpp"
+
+class CaptureStream : public Stream {
+public:
+    size_t write(uint8_t value) override
+    {
+        output += static_cast<char>(value);
+        return 1;
+    }
+
+    void clear()
+    {
+        output.clear();
+    }
+
+    std::string output;
+};
 
 static bool feedReceiverChunk(OpenMVReceiver& receiver, const String& input)
 {
@@ -31,6 +50,7 @@ static void feedCompleteML(OpenMVReceiver& receiver)
 
 void setUp(void)
 {
+    fakeMillis = 0;
 }
 
 void tearDown(void)
@@ -196,6 +216,24 @@ void test_open_mv_receiver_ignores_cfg_and_dbg_outside_image_framing(void)
     TEST_ASSERT_EQUAL(11, receivedByteCount);
 }
 
+void test_open_mv_receiver_ignores_servo_tags_inside_image_framing(void)
+{
+    OpenMVReceiver receiver;
+    String receivedImage = "";
+    int receivedByteCount = 0;
+
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "IMG_BEGIN 3"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "DBG_SERVO_RX line=SERVO L 1500 R 1500"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "CFG_SERVO L=1500 R=1500"));
+    TEST_ASSERT_FALSE(feedReceiverChunk(receiver, "QUJD"));
+    TEST_ASSERT_TRUE(feedReceiverChunk(receiver, "IMG_END"));
+
+    TEST_ASSERT_EQUAL_UINT8(1, receiver.queueSize());
+    TEST_ASSERT_TRUE(receiver.getImage(receivedImage, receivedByteCount));
+    TEST_ASSERT_EQUAL_STRING("QUJD", receivedImage.c_str());
+    TEST_ASSERT_EQUAL(3, receivedByteCount);
+}
+
 void test_open_mv_receiver_drops_malformed_ml_without_corrupting_images(void)
 {
     OpenMVReceiver receiver;
@@ -247,6 +285,83 @@ void test_open_mv_receiver_does_not_publish_ml_without_end(void)
     TEST_ASSERT_FALSE(receiver.hasMLResult());
 }
 
+void test_openmv_backend_begin_arm_sends_neutral(void)
+{
+    ScrewDriveInterface screwDrive;
+    CaptureStream output;
+
+    screwDrive.useOpenMVUartOutput(&output);
+    screwDrive.attach(1, 2);
+    output.clear();
+
+    screwDrive.beginArm();
+
+    TEST_ASSERT_EQUAL_STRING("SERVO L 1500 R 1500\n", output.output.c_str());
+    TEST_ASSERT_TRUE(screwDrive.isUsingOpenMVUartOutput());
+}
+
+void test_openmv_backend_neutral_calibration_updates_transmitted_pulse(void)
+{
+    ScrewDriveInterface screwDrive;
+    CaptureStream output;
+
+    screwDrive.useOpenMVUartOutput(&output);
+    screwDrive.attach(1, 2);
+    screwDrive.beginNeutralArmCalibration(nullptr);
+    output.clear();
+
+    TEST_ASSERT_FALSE(screwDrive.updateNeutralArmCalibration("+"));
+
+    TEST_ASSERT_EQUAL_UINT16(1505, screwDrive.getLastLeftPulseUs());
+    TEST_ASSERT_EQUAL_UINT16(1505, screwDrive.getLastRightPulseUs());
+    TEST_ASSERT_EQUAL_STRING("SERVO L 1505 R 1505\n", output.output.c_str());
+}
+
+void test_openmv_backend_drive_uses_existing_effort_to_pulse_math(void)
+{
+    ScrewDriveInterface screwDrive;
+    CaptureStream output;
+
+    screwDrive.useOpenMVUartOutput(&output);
+    screwDrive.attach(1, 2);
+    screwDrive.beginArm(0);
+    TEST_ASSERT_TRUE(screwDrive.updateArm());
+    output.clear();
+
+    screwDrive.drive(0.8f, 0.0f);
+
+    TEST_ASSERT_EQUAL_FLOAT(0.2f, screwDrive.getLastLeftEffort());
+    TEST_ASSERT_EQUAL_FLOAT(0.2f, screwDrive.getLastRightEffort());
+    TEST_ASSERT_EQUAL_UINT16(1600, screwDrive.getLastLeftPulseUs());
+    TEST_ASSERT_EQUAL_UINT16(1600, screwDrive.getLastRightPulseUs());
+    TEST_ASSERT_EQUAL_STRING("SERVO L 1600 R 1600\n", output.output.c_str());
+}
+
+void test_openmv_backend_throttles_repeated_unchanged_writes_until_keepalive(void)
+{
+    ScrewDriveInterface screwDrive;
+    CaptureStream output;
+
+    screwDrive.useOpenMVUartOutput(&output, 250);
+    screwDrive.attach(1, 2);
+    output.clear();
+
+    screwDrive.beginArm(1000);
+    TEST_ASSERT_EQUAL_STRING("SERVO L 1500 R 1500\n", output.output.c_str());
+
+    output.clear();
+    TEST_ASSERT_FALSE(screwDrive.updateArm());
+    TEST_ASSERT_EQUAL_STRING("", output.output.c_str());
+
+    fakeMillis = 249;
+    TEST_ASSERT_FALSE(screwDrive.updateArm());
+    TEST_ASSERT_EQUAL_STRING("", output.output.c_str());
+
+    fakeMillis = 250;
+    TEST_ASSERT_FALSE(screwDrive.updateArm());
+    TEST_ASSERT_EQUAL_STRING("SERVO L 1500 R 1500\n", output.output.c_str());
+}
+
 int main(int argc, char** argv)
 {
     UNITY_BEGIN();
@@ -256,8 +371,13 @@ int main(int argc, char** argv)
     RUN_TEST(test_open_mv_receiver_parses_ml_result);
     RUN_TEST(test_open_mv_receiver_handles_ml_then_image_independently);
     RUN_TEST(test_open_mv_receiver_ignores_cfg_and_dbg_outside_image_framing);
+    RUN_TEST(test_open_mv_receiver_ignores_servo_tags_inside_image_framing);
     RUN_TEST(test_open_mv_receiver_drops_malformed_ml_without_corrupting_images);
     RUN_TEST(test_open_mv_receiver_flags_extra_ml_blobs);
     RUN_TEST(test_open_mv_receiver_does_not_publish_ml_without_end);
+    RUN_TEST(test_openmv_backend_begin_arm_sends_neutral);
+    RUN_TEST(test_openmv_backend_neutral_calibration_updates_transmitted_pulse);
+    RUN_TEST(test_openmv_backend_drive_uses_existing_effort_to_pulse_math);
+    RUN_TEST(test_openmv_backend_throttles_repeated_unchanged_writes_until_keepalive);
     return UNITY_END();
 }

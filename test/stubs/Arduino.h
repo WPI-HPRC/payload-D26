@@ -1,28 +1,48 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
-class Stream {
-public:
-    virtual ~Stream() = default;
-    virtual int available() = 0;
-    virtual int read() = 0;
-};
+using byte = uint8_t;
 
-class SerialStub {
-public:
-    template <typename T>
-    void print(const T&) {}
+inline unsigned long fakeMillis = 0;
 
-    template <typename T>
-    void println(const T&) {}
+inline unsigned long millis()
+{
+    return fakeMillis;
+}
 
-    void println() {}
-};
+template <typename T>
+T min(T lhs, T rhs)
+{
+    return lhs < rhs ? lhs : rhs;
+}
 
-inline SerialStub Serial;
+template <typename T>
+T max(T lhs, T rhs)
+{
+    return lhs > rhs ? lhs : rhs;
+}
+
+template <typename T>
+T constrain(T value, T lower, T upper)
+{
+    if (value < lower) {
+        return lower;
+    }
+
+    if (value > upper) {
+        return upper;
+    }
+
+    return value;
+}
 
 class String {
 public:
@@ -53,6 +73,11 @@ public:
     {
         const std::string prefixValue(prefix ? prefix : "");
         return value.rfind(prefixValue, 0) == 0;
+    }
+
+    bool startsWith(const String& prefix) const
+    {
+        return value.rfind(prefix.value, 0) == 0;
     }
 
     bool endsWith(const char* suffix) const
@@ -93,6 +118,21 @@ public:
         return static_cast<int>(position);
     }
 
+    int indexOf(char character, int fromIndex) const
+    {
+        if (fromIndex < 0 || static_cast<size_t>(fromIndex) >= value.length()) {
+            return -1;
+        }
+
+        const size_t position = value.find(character, static_cast<size_t>(fromIndex));
+
+        if (position == std::string::npos) {
+            return -1;
+        }
+
+        return static_cast<int>(position);
+    }
+
     String substring(int start) const
     {
         if (start < 0 || static_cast<size_t>(start) >= value.length()) {
@@ -102,9 +142,51 @@ public:
         return value.substr(static_cast<size_t>(start));
     }
 
+    String substring(int start, int end) const
+    {
+        if (start < 0) {
+            start = 0;
+        }
+
+        if (end < start) {
+            end = start;
+        }
+
+        if (static_cast<size_t>(start) >= value.length()) {
+            return "";
+        }
+
+        size_t cappedEnd = std::min(static_cast<size_t>(end), value.length());
+        return value.substr(static_cast<size_t>(start), cappedEnd - static_cast<size_t>(start));
+    }
+
+    void trim()
+    {
+        const size_t start = value.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) {
+            value.clear();
+            return;
+        }
+
+        const size_t end = value.find_last_not_of(" \t\r\n");
+        value = value.substr(start, end - start + 1);
+    }
+
+    void toLowerCase()
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+        });
+    }
+
     long toInt() const
     {
         return std::strtol(value.c_str(), nullptr, 10);
+    }
+
+    float toFloat() const
+    {
+        return std::strtof(value.c_str(), nullptr);
     }
 
     String& operator=(const char* rhs)
@@ -127,6 +209,101 @@ public:
         return *this;
     }
 
+    bool operator==(const char* rhs) const
+    {
+        return value == (rhs ? rhs : "");
+    }
+
+    bool operator!=(const char* rhs) const
+    {
+        return !(*this == rhs);
+    }
+
+    bool operator==(const String& rhs) const
+    {
+        return value == rhs.value;
+    }
+
+    bool operator!=(const String& rhs) const
+    {
+        return !(*this == rhs);
+    }
+
 private:
     std::string value;
+
+    friend class Stream;
 };
+
+class Stream {
+public:
+    virtual ~Stream() = default;
+    virtual int available() { return 0; }
+    virtual int read() { return -1; }
+    virtual size_t write(uint8_t) { return 1; }
+
+    size_t write(const char* value)
+    {
+        if (value == nullptr) {
+            return 0;
+        }
+
+        size_t count = 0;
+        while (*value != '\0') {
+            count += write(static_cast<uint8_t>(*value));
+            value++;
+        }
+        return count;
+    }
+
+    size_t write(const uint8_t* value, size_t size)
+    {
+        size_t count = 0;
+        for (size_t i = 0; i < size; i++) {
+            count += write(value[i]);
+        }
+        return count;
+    }
+
+    void print(const char* value) { write(value); }
+    void print(char value) { write(static_cast<uint8_t>(value)); }
+    void print(const String& value) { write(value.value.c_str()); }
+    void print(int value) { printNumber(value); }
+    void print(unsigned int value) { printNumber(value); }
+    void print(long value) { printNumber(value); }
+    void print(unsigned long value) { printNumber(value); }
+    void print(float value, int digits = 2) { printFloat(value, digits); }
+    void print(double value, int digits = 2) { printFloat(value, digits); }
+
+    void println() { write(static_cast<uint8_t>('\n')); }
+
+    template <typename T>
+    void println(const T& value)
+    {
+        print(value);
+        println();
+    }
+
+private:
+    template <typename T>
+    void printNumber(T value)
+    {
+        std::ostringstream output;
+        output << value;
+        write(output.str().c_str());
+    }
+
+    void printFloat(double value, int digits)
+    {
+        std::ostringstream output;
+        output << std::fixed << std::setprecision(digits) << value;
+        write(output.str().c_str());
+    }
+};
+
+class SerialStub : public Stream {
+public:
+    size_t write(uint8_t) override { return 1; }
+};
+
+inline SerialStub Serial;

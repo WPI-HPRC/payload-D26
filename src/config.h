@@ -11,6 +11,13 @@
 // serial commands to tune the neutral pulse. Must be disabled for flight.
 #define ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG 1
 
+// Route screw-drive ESC pulse commands through the OpenMV UART bridge instead
+// of driving PWM directly from MARS pins. Set to 0 to use the legacy Servo pins.
+#define ENABLE_SCREW_DRIVE_OPENMV_UART_OUTPUT 1
+
+// Enable local USB serial commands for OpenMV servo UART bring-up.
+#define ENABLE_OPENMV_SERVO_UART_DEBUG 1
+
 // Debug-only self-righting servo calibration mode.
 // When enabled, PAYLOAD_SELF_RIGHTING stays in a serial-driven tuning loop.
 // Must be disabled for flight.
