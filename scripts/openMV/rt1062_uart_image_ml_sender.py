@@ -7,6 +7,8 @@ import time
 import machine
 from collections import namedtuple
 from machine import UART
+from machine import Pin
+from machine import PWM
 from machine import LED
 
 
@@ -19,6 +21,17 @@ FRAME_INTERVAL_MS = 0
 ENABLE_IMAGE_TRANSMIT = True
 ENABLE_ML_DATA_TRANSMIT = True
 ENABLE_DEBUGS = True
+
+ENABLE_SERVO_PWM_BRIDGE = True
+ENABLE_SERVO_RX_CONSOLE_LOG = True
+ENABLE_SERVO_RX_UART_ECHO = True
+ENABLE_SERVO_STATUS_DEBUG_ECHO = True
+LEFT_ESC_PWM_PIN = "P7"
+RIGHT_ESC_PWM_PIN = "P8"
+SERVO_PWM_HZ = 50
+SERVO_MIN_PULSE_US = 1000
+SERVO_MAX_PULSE_US = 2000
+SERVO_DEFAULT_PULSE_US = 1500
 
 SD_FRAME_SIZE = csi.VGA
 SD_WINDOW = (90, 120)
@@ -102,6 +115,10 @@ timing_gc_ms = 0
 timing_frame_total_ms = 0
 command_line_buffer = ""
 frame_id = 0
+left_servo_pwm = None
+right_servo_pwm = None
+left_servo_pulse_us = SERVO_DEFAULT_PULSE_US
+right_servo_pulse_us = SERVO_DEFAULT_PULSE_US
 
 
 def bool_to_int(value):
@@ -669,6 +686,144 @@ def write_config(uart):
     ))
 
 
+def clamp_servo_pulse(pulse_us):
+    if pulse_us < SERVO_MIN_PULSE_US:
+        return SERVO_MIN_PULSE_US
+    if pulse_us > SERVO_MAX_PULSE_US:
+        return SERVO_MAX_PULSE_US
+    return pulse_us
+
+
+def servo_pulse_to_duty_ns(pulse_us):
+    return int(clamp_servo_pulse(pulse_us)) * 1000
+
+
+def set_servo_pwm_us(pwm, pulse_us):
+    pwm.duty_ns(servo_pulse_to_duty_ns(pulse_us))
+
+
+def apply_servo_pulses(left_us, right_us):
+    global left_servo_pulse_us, right_servo_pulse_us
+
+    if left_servo_pwm is None or right_servo_pwm is None:
+        return False
+
+    left_servo_pulse_us = clamp_servo_pulse(int(left_us))
+    right_servo_pulse_us = clamp_servo_pulse(int(right_us))
+    set_servo_pwm_us(left_servo_pwm, left_servo_pulse_us)
+    set_servo_pwm_us(right_servo_pwm, right_servo_pulse_us)
+    return True
+
+
+def write_servo_status(uart, prefix="CFG_SERVO"):
+    uart.write("%s L=%d R=%d\n" % (prefix, left_servo_pulse_us, right_servo_pulse_us))
+
+    if ENABLE_SERVO_STATUS_DEBUG_ECHO and prefix != "DBG_SERVO_STATUS":
+        uart.write("DBG_SERVO_STATUS L=%d R=%d\n" % (left_servo_pulse_us, right_servo_pulse_us))
+
+
+def write_servo_error(uart, reason):
+    uart.write("CFG_SERVO_ERR reason=%s\n" % reason)
+
+
+def log_servo_rx(uart, line):
+    message = "DBG_SERVO_RX line=%s" % line
+
+    if ENABLE_SERVO_RX_CONSOLE_LOG:
+        safe_print(message)
+
+    if ENABLE_SERVO_RX_UART_ECHO:
+        uart.write(message + "\n")
+
+
+def parse_int_token(token):
+    try:
+        return int(token)
+    except Exception:
+        return None
+
+
+def handle_servo_command(uart, original_line, parts):
+    if not ENABLE_SERVO_PWM_BRIDGE:
+        write_servo_error(uart, "servo_bridge_disabled")
+        return
+
+    log_servo_rx(uart, original_line)
+
+    if len(parts) != 5 or parts[1] != "L" or parts[3] != "R":
+        write_servo_error(uart, "bad_servo_format")
+        return
+
+    left_us = parse_int_token(parts[2])
+    right_us = parse_int_token(parts[4])
+
+    if left_us is None or right_us is None:
+        write_servo_error(uart, "bad_servo_value")
+        return
+
+    if (left_us < SERVO_MIN_PULSE_US or left_us > SERVO_MAX_PULSE_US or
+            right_us < SERVO_MIN_PULSE_US or right_us > SERVO_MAX_PULSE_US):
+        write_servo_error(uart, "servo_out_of_range")
+        return
+
+    if not apply_servo_pulses(left_us, right_us):
+        write_servo_error(uart, "servo_pwm_unavailable")
+        return
+
+    write_servo_status(uart)
+
+
+def handle_servo_ping(uart, original_line):
+    log_servo_rx(uart, original_line)
+
+    token = ""
+    if len(original_line.split(None, 1)) == 2:
+        token = original_line.split(None, 1)[1]
+
+    uart.write("DBG_SERVO_PONG token=%s\n" % token)
+
+
+def handle_servo_get(uart, original_line):
+    log_servo_rx(uart, original_line)
+    write_servo_status(uart)
+
+
+def setup_servo_pwm_bridge(uart):
+    global left_servo_pwm, right_servo_pwm
+
+    if not ENABLE_SERVO_PWM_BRIDGE:
+        uart.write("CFG_SERVO DISABLED=1\n")
+        return
+
+    try:
+        left_servo_pwm = PWM(
+            Pin(LEFT_ESC_PWM_PIN),
+            freq=SERVO_PWM_HZ,
+            duty_ns=servo_pulse_to_duty_ns(SERVO_DEFAULT_PULSE_US)
+        )
+        right_servo_pwm = PWM(
+            Pin(RIGHT_ESC_PWM_PIN),
+            freq=SERVO_PWM_HZ,
+            duty_ns=servo_pulse_to_duty_ns(SERVO_DEFAULT_PULSE_US)
+        )
+        apply_servo_pulses(SERVO_DEFAULT_PULSE_US, SERVO_DEFAULT_PULSE_US)
+        uart.write("CFG_SERVO_READY left_pin=%s right_pin=%s hz=%d min=%d max=%d default=%d\n" % (
+            LEFT_ESC_PWM_PIN,
+            RIGHT_ESC_PWM_PIN,
+            SERVO_PWM_HZ,
+            SERVO_MIN_PULSE_US,
+            SERVO_MAX_PULSE_US,
+            SERVO_DEFAULT_PULSE_US
+        ))
+        write_servo_status(uart)
+        safe_print("DBG_SERVO_READY left_pin=%s right_pin=%s" % (LEFT_ESC_PWM_PIN, RIGHT_ESC_PWM_PIN))
+    except Exception as exc:
+        left_servo_pwm = None
+        right_servo_pwm = None
+        safe_print("WARN_SERVO_PWM_SETUP_FAILED error=%s" % format_exception(exc))
+        write_servo_error(uart, "servo_pwm_setup_failed")
+
+
 def parse_bool_token(token):
     if token == "1" or token == "ON" or token == "TRUE":
         return True
@@ -730,12 +885,25 @@ def apply_set_command(uart, parts):
 
 
 def handle_uart_command(uart, line):
-    line = line.strip().upper()
+    original_line = line.strip()
+    line = original_line.upper()
 
     if len(line) == 0:
         return
 
     parts = line.split()
+
+    if parts[0] == "SERVO":
+        handle_servo_command(uart, original_line, parts)
+        return
+
+    if parts[0] == "PING_SERVO":
+        handle_servo_ping(uart, original_line)
+        return
+
+    if parts[0] == "GET_SERVO":
+        handle_servo_get(uart, original_line)
+        return
 
     if len(parts) == 2 and parts[0] == "GET" and parts[1] == "CFG":
         write_config(uart)
@@ -936,6 +1104,7 @@ def update_status_leds():
 camera = setup_camera()
 setup_sd_storage()
 uart = UART(UART_BUS, baudrate=BAUDRATE)
+setup_servo_pwm_bridge(uart)
 write_config(uart)
 
 while True:
