@@ -62,8 +62,10 @@ CAMERA_SETTLE_SNAPSHOT_MS = 1000
 RUN_LED = LED("LED_GREEN")
 try:
     SD_ERROR_LED = LED("LED_RED")
+    HAS_SEPARATE_SD_ERROR_LED = True
 except Exception:
     SD_ERROR_LED = RUN_LED
+    HAS_SEPARATE_SD_ERROR_LED = False
 RUN_LED_BLINK_PERIOD_MS = 1000
 RUN_LED_ON_TIME_MS = 50
 SD_ERROR_BLINK_PERIOD_MS = 1200
@@ -1078,14 +1080,15 @@ def blink_to_show_running():
 
 
 def blink_to_show_sd_error():
+    if not HAS_SEPARATE_SD_ERROR_LED:
+        return
+
     phase = time.ticks_ms() % SD_ERROR_BLINK_PERIOD_MS
     led_on = (
         phase < SD_ERROR_BLINK_ON_MS or
         (200 <= phase < 200 + SD_ERROR_BLINK_ON_MS) or
         (400 <= phase < 400 + SD_ERROR_BLINK_ON_MS)
     )
-
-    RUN_LED.off()
 
     if led_on:
         SD_ERROR_LED.on()
@@ -1094,9 +1097,11 @@ def blink_to_show_sd_error():
 
 
 def update_status_leds():
+    blink_to_show_running()
+
     if sd_available:
-        SD_ERROR_LED.off()
-        blink_to_show_running()
+        if HAS_SEPARATE_SD_ERROR_LED:
+            SD_ERROR_LED.off()
     else:
         blink_to_show_sd_error()
 

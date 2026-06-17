@@ -339,7 +339,7 @@ void setup() {
   pinMode(ADC_INP4, INPUT);
   digitalWrite(MOSFET_GATE, HIGH);
 
-  ctx.currentState = PAYLOAD_SELF_RIGHTING;
+  ctx.currentState = PAYLOAD_IDLE;
   data = {};
 
   initStateMap();
@@ -385,7 +385,7 @@ void setup() {
 
   // NOTE: Run initialization on the first state
   initStateData(&data);
-  (*initFuncs[ctx.currentState])(&data);
+  stateLocalData = (*initFuncs[ctx.currentState])(&data);
 
   // ctx.estimator = SplitStateEstimator();
 

@@ -4,6 +4,8 @@
 
 hprc::States stateToTelemState(StateID state) {
   switch (state) {
+  case ROCKET_TIMER:
+      return hprc::States_Start;
   case PAYLOAD_SELF_RIGHTING:
       return hprc::States_SelfRighting;
   case PAYLOAD_LATCH_RELEASING:
@@ -48,6 +50,7 @@ StateInitFunc initFuncs[NUM_STATES] = {};
 StateLoopFunc loopFuncs[NUM_STATES] = {};
 
 void initStateMap() {
+    initFuncs[ROCKET_TIMER] = &rocketTimerInit;
     initFuncs[PAYLOAD_SELF_RIGHTING] = &payloadSelfRightingInit;
     initFuncs[PAYLOAD_LATCH_RELEASING] = &payloadLatchReleasingInit;
     initFuncs[PAYLOAD_DEPLOYING] = &payloadDeployingInit;
@@ -58,6 +61,7 @@ void initStateMap() {
     initFuncs[CONVENTION_DEMO] = &conventionDemoInit;
     initFuncs[PAYLOAD_IDLE] = &payloadIdleInit;
 
+    loopFuncs[ROCKET_TIMER] = &rocketTimerLoop;
     loopFuncs[PAYLOAD_SELF_RIGHTING] = &payloadSelfRightingLoop;
     loopFuncs[PAYLOAD_LATCH_RELEASING] = &payloadLatchReleasingLoop;
     loopFuncs[PAYLOAD_DEPLOYING] = &payloadDeployingLoop;

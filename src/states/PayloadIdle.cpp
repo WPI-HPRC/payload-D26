@@ -8,7 +8,11 @@ void *payloadIdleInit(StateData const *data) {
 StateID payloadIdleLoop(StateData const *data, Context *ctx, void *_localData) {
 
     // for now
-    Serial.println("In Payload Idle State... Transitioning to self-righting");
+    Serial.println("In Payload Idle State... Transitioning to RRocket Timer in 5 seconds");
+
+    if (data->currentTime > 5000) {
+        return ROCKET_TIMER; // Transition to the next state (Rocket Timer)
+    }
     
-    return PAYLOAD_SELF_RIGHTING; // Transition to the next state (self-righting)
+    return ROCKET_TIMER; // Transition to the next state (Rocket Timer)
 }

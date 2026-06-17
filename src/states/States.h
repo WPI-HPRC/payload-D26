@@ -3,6 +3,7 @@
 #include "States_generated.h"
 
 enum StateID {
+    ROCKET_TIMER,
     PAYLOAD_SELF_RIGHTING,
     PAYLOAD_LATCH_RELEASING,
     PAYLOAD_DEPLOYING,
@@ -30,6 +31,10 @@ struct Context;
 void initStateData(StateData *data);
 
 void updateStateData(StateData *data);
+
+// ROCKET_TIMER
+void *rocketTimerInit(StateData const *data);
+StateID rocketTimerLoop(StateData const *data, Context *ctx, void *localData);
 
 // PAYLOAD_SELF_RIGHTING
 void *payloadSelfRightingInit(StateData const *data);
