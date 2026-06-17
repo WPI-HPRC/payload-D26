@@ -181,7 +181,7 @@ class ScrewDriveInterface {
     int leftSignalPin = -1;
     int rightSignalPin = -1;
     DriveControlStrategy driveStrategy = ARCADE;
-    float leftCorrection = 1.0f;
+    float leftCorrection = -1.0f;
     float rightCorrection = 1.0f;
     bool invertLeft = false;
     bool invertRight = false;

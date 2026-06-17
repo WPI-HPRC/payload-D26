@@ -4,7 +4,7 @@
 
 #define ANTENNA_RAISE_DURATION_MS 3000
 #define ANTENNA_DOWN_MS 1000
-#define ANTENNA_UP_MS 2000
+#define ANTENNA_UP_MS 1800
 
 extern Servo antennaServo;
 

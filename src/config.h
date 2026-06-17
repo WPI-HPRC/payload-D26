@@ -9,7 +9,7 @@
 // Debug-only ESC neutral calibration mode for the screw drive.
 // When enabled, screw-drive arming holds neutral indefinitely and accepts
 // serial commands to tune the neutral pulse. Must be disabled for flight.
-#define ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG 1
+#define ENABLE_SCREW_DRIVE_NEUTRAL_ARMING_DEBUG 0
 
 // Route screw-drive ESC pulse commands through the OpenMV UART bridge instead
 // of driving PWM directly from MARS pins. Set to 0 to use the legacy Servo pins.
